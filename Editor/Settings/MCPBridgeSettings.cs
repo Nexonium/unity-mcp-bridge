@@ -1,0 +1,83 @@
+using UnityEditor;
+using UnityEngine;
+
+namespace UnityMCPBridge.Settings
+{
+    /// <summary>
+    /// Persistent settings for Unity MCP Bridge.
+    /// Uses EditorPrefs for storage to persist across sessions.
+    /// </summary>
+    public static class MCPBridgeSettings
+    {
+        private const string KeyPrefix = "UnityMCPBridge_";
+        private const string PortKey = KeyPrefix + "Port";
+        private const string MaxLogEntriesKey = KeyPrefix + "MaxLogEntries";
+        private const string AutoStartKey = KeyPrefix + "AutoStart";
+        private const string IncludeWarningsKey = KeyPrefix + "IncludeWarnings";
+        private const string IncludeStackTraceKey = KeyPrefix + "IncludeStackTrace";
+
+        // Default values
+        private const int DefaultPort = 7890;
+        private const int DefaultMaxLogEntries = 500;
+        private const bool DefaultAutoStart = false;
+        private const bool DefaultIncludeWarnings = true;
+        private const bool DefaultIncludeStackTrace = true;
+
+        /// <summary>
+        /// HTTP server port. Default: 7890
+        /// </summary>
+        public static int Port
+        {
+            get => EditorPrefs.GetInt(PortKey, DefaultPort);
+            set => EditorPrefs.SetInt(PortKey, Mathf.Clamp(value, 1024, 65535));
+        }
+
+        /// <summary>
+        /// Maximum number of log entries to keep in memory. Default: 500
+        /// </summary>
+        public static int MaxLogEntries
+        {
+            get => EditorPrefs.GetInt(MaxLogEntriesKey, DefaultMaxLogEntries);
+            set => EditorPrefs.SetInt(MaxLogEntriesKey, Mathf.Max(10, value));
+        }
+
+        /// <summary>
+        /// Whether to auto-start the server when Unity opens. Default: false
+        /// </summary>
+        public static bool AutoStart
+        {
+            get => EditorPrefs.GetBool(AutoStartKey, DefaultAutoStart);
+            set => EditorPrefs.SetBool(AutoStartKey, value);
+        }
+
+        /// <summary>
+        /// Whether to include compilation warnings (not just errors). Default: true
+        /// </summary>
+        public static bool IncludeWarnings
+        {
+            get => EditorPrefs.GetBool(IncludeWarningsKey, DefaultIncludeWarnings);
+            set => EditorPrefs.SetBool(IncludeWarningsKey, value);
+        }
+
+        /// <summary>
+        /// Whether to include stack traces in log entries. Default: true
+        /// </summary>
+        public static bool IncludeStackTrace
+        {
+            get => EditorPrefs.GetBool(IncludeStackTraceKey, DefaultIncludeStackTrace);
+            set => EditorPrefs.SetBool(IncludeStackTraceKey, value);
+        }
+
+        /// <summary>
+        /// Resets all settings to their default values.
+        /// </summary>
+        public static void ResetToDefaults()
+        {
+            Port = DefaultPort;
+            MaxLogEntries = DefaultMaxLogEntries;
+            AutoStart = DefaultAutoStart;
+            IncludeWarnings = DefaultIncludeWarnings;
+            IncludeStackTrace = DefaultIncludeStackTrace;
+        }
+    }
+}

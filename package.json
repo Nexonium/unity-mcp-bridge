@@ -1,0 +1,24 @@
+{
+  "name": "com.nexonium.unity-mcp-bridge",
+  "version": "1.0.0",
+  "displayName": "Unity MCP Bridge",
+  "description": "Bridge between Unity Editor and AI agents via Model Context Protocol (MCP). Provides real-time access to console logs, compilation errors, and Play Mode control.",
+  "unity": "6000.0",
+  "documentationUrl": "https://github.com/Nexonium/unity-mcp-bridge#readme",
+  "keywords": [
+    "mcp",
+    "ai",
+    "debugging",
+    "automation",
+    "editor",
+    "cursor",
+    "claude"
+  ],
+  "author": {
+    "name": "Nexonium",
+    "url": "https://github.com/Nexonium"
+  },
+  "license": "MIT",
+  "type": "tool",
+  "dependencies": {}
+}
