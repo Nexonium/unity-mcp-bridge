@@ -17,9 +17,21 @@ namespace UnityMCPBridge.Services
         private readonly object _lock = new();
         private readonly List<CompilationError> _errors = new();
         private readonly List<CompilationError> _warnings = new();
+        private bool _isCompiling;
 
         public bool IsRunning { get; private set; }
-        public bool IsCompiling { get; private set; }
+        
+        public bool IsCompiling
+        {
+            get
+            {
+                lock (_lock) { return _isCompiling; }
+            }
+            private set
+            {
+                lock (_lock) { _isCompiling = value; }
+            }
+        }
 
         public bool HasErrors
         {
@@ -112,6 +124,9 @@ namespace UnityMCPBridge.Services
 
             var assemblyName = System.IO.Path.GetFileNameWithoutExtension(assemblyPath);
             var includeWarnings = MCPBridgeSettings.IncludeWarnings;
+            
+            // Collect errors to notify outside of lock to prevent potential deadlocks
+            var errorsToNotify = new List<CompilationError>();
 
             lock (_lock)
             {
@@ -124,15 +139,21 @@ namespace UnityMCPBridge.Services
                         if (includeWarnings)
                         {
                             _warnings.Add(error);
-                            OnErrorReceived?.Invoke(error);
+                            errorsToNotify.Add(error);
                         }
                     }
                     else
                     {
                         _errors.Add(error);
-                        OnErrorReceived?.Invoke(error);
+                        errorsToNotify.Add(error);
                     }
                 }
+            }
+            
+            // Invoke events outside of lock to prevent deadlocks
+            foreach (var error in errorsToNotify)
+            {
+                OnErrorReceived?.Invoke(error);
             }
         }
     }

@@ -64,8 +64,8 @@ class UnityMCPServer {
             properties: {
               type: {
                 type: 'string',
-                description: 'Filter logs by type: "all", "log", "warning", "error", "exception"',
-                enum: ['all', 'log', 'warning', 'error', 'exception'],
+                description: 'Filter logs by type: "all", "log", "warning", "error", "exception", "assert"',
+                enum: ['all', 'log', 'warning', 'error', 'exception', 'assert'],
               },
               limit: {
                 type: 'number',
@@ -230,12 +230,14 @@ class UnityMCPServer {
       .map((log) => {
         const prefix = log.type === 'error' || log.type === 'exception' 
           ? '[ERROR]' 
-          : log.type === 'warning' 
-            ? '[WARN]' 
-            : '[LOG]';
+          : log.type === 'assert'
+            ? '[ASSERT]'
+            : log.type === 'warning' 
+              ? '[WARN]' 
+              : '[LOG]';
         const time = new Date(log.timestamp).toLocaleTimeString();
         let entry = `${prefix} ${time}: ${log.message}`;
-        if (log.stackTrace && (log.type === 'error' || log.type === 'exception')) {
+        if (log.stackTrace && (log.type === 'error' || log.type === 'exception' || log.type === 'assert')) {
           entry += `\n  Stack: ${log.stackTrace.split('\n')[0]}`;
         }
         return entry;

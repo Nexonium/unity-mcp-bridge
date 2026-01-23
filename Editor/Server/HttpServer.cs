@@ -174,13 +174,22 @@ namespace UnityMCPBridge.Server
                 }
                 finally
                 {
-                    try
+                    var handle = command.WaitHandle;
+                    if (handle != null)
                     {
-                        command.WaitHandle?.Set();
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        // WaitHandle was disposed due to timeout - request already returned 504
+                        // Signal completion and dispose the handle (we own its lifecycle)
+                        try
+                        {
+                            handle.Set();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            // Should not happen anymore, but keep as safety net
+                        }
+                        finally
+                        {
+                            handle.Dispose();
+                        }
                     }
                     processed++;
                 }
@@ -225,7 +234,8 @@ namespace UnityMCPBridge.Server
                 if (RequiresMainThread(request.HttpMethod, path))
                 {
                     // Queue for main thread processing
-                    using var waitHandle = new ManualResetEvent(false);
+                    // Note: WaitHandle is NOT disposed here - main thread owns its lifecycle
+                    var waitHandle = new ManualResetEvent(false);
                     var command = new PendingCommand
                     {
                         Method = request.HttpMethod,
@@ -239,6 +249,8 @@ namespace UnityMCPBridge.Server
                     // Wait for processing (with timeout)
                     if (!waitHandle.WaitOne(10000))
                     {
+                        // Timeout - mark handle as timed out so main thread knows to dispose it
+                        command.TimedOut = true;
                         statusCode = 504;
                         contentType = "application/json";
                         responseBody = JsonSerializer.Serialize(new { 
@@ -251,7 +263,6 @@ namespace UnityMCPBridge.Server
                         contentType = command.ContentType;
                         responseBody = command.ResponseBody;
                     }
-                    // waitHandle is automatically disposed by 'using' statement
                 }
                 else
                 {
@@ -335,6 +346,7 @@ namespace UnityMCPBridge.Server
             public int StatusCode;
             public string ContentType;
             public string ResponseBody;
+            public volatile bool TimedOut;
         }
     }
 }
