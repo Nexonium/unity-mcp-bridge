@@ -20,8 +20,28 @@ namespace UnityMCPBridge.Services
 
         public bool IsRunning { get; private set; }
         public bool IsCompiling { get; private set; }
-        public bool HasErrors => _errors.Count > 0;
-        public bool HasWarnings => _warnings.Count > 0;
+
+        public bool HasErrors
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _errors.Count > 0;
+                }
+            }
+        }
+
+        public bool HasWarnings
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _warnings.Count > 0;
+                }
+            }
+        }
 
         public event Action OnCompilationStarted;
         public event Action<bool> OnCompilationFinished;

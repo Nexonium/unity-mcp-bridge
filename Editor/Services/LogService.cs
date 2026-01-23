@@ -35,8 +35,8 @@ namespace UnityMCPBridge.Services
                 lock (_lock)
                 {
                     _maxEntries = Math.Max(10, value);
+                    TrimExcessEntriesUnsafe();
                 }
-                TrimExcessEntries();
             }
         }
 
@@ -109,7 +109,7 @@ namespace UnityMCPBridge.Services
             lock (_lock)
             {
                 _logs.AddLast(entry);
-                TrimExcessEntries();
+                TrimExcessEntriesUnsafe();
             }
 
             OnLogReceived?.Invoke(entry);
@@ -119,10 +119,18 @@ namespace UnityMCPBridge.Services
         {
             lock (_lock)
             {
-                while (_logs.Count > _maxEntries)
-                {
-                    _logs.RemoveFirst();
-                }
+                TrimExcessEntriesUnsafe();
+            }
+        }
+
+        /// <summary>
+        /// Trims excess entries without acquiring lock. Must be called while holding _lock.
+        /// </summary>
+        private void TrimExcessEntriesUnsafe()
+        {
+            while (_logs.Count > _maxEntries)
+            {
+                _logs.RemoveFirst();
             }
         }
     }
