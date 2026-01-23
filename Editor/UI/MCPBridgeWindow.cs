@@ -19,7 +19,7 @@ namespace UnityMCPBridge.UI
         private GUIStyle _statusTextStyle;
         private bool _stylesInitialized;
 
-        [MenuItem("Window/Unity MCP Bridge")]
+        [MenuItem("Window/Unity MCP Bridge/Server", priority = 10)]
         public static void ShowWindow()
         {
             var window = GetWindow<MCPBridgeWindow>();
