@@ -11,6 +11,7 @@
 .vs/
 .vscode/
 .idea/
+.cursorrules
 *.csproj
 *.sln
 *.suo
