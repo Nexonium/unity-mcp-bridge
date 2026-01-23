@@ -38,24 +38,40 @@ Unity MCP Bridge enables AI assistants like **Claude in Cursor** to interact dir
 
 ### Step 1: Install Unity Package
 
-**Option A: Download and Install Locally (Recommended)**
+**Option A: Install via Package Manager (Recommended)**
 
-1. Download or clone this repository
-2. In Unity, go to **Window > Package Manager**
-3. Click **+** > **Add package from disk...**
-4. Navigate to the downloaded folder and select `package.json`
+1. In Unity, go to **Window > Package Manager**
+2. Click **+** in the top-left corner
+3. Select **Add package from git URL...**
+4. Enter:
+   ```
+   https://github.com/Nexonium/unity-mcp-bridge.git
+   ```
+5. Click **Add**
 
-**Option B: Add via Git URL**
+To install a specific version, append the tag:
+```
+https://github.com/Nexonium/unity-mcp-bridge.git#v1.0.0
+```
+
+**Option B: Add to manifest.json**
 
 Add to your `Packages/manifest.json`:
 
 ```json
 {
   "dependencies": {
-    "com.pixelcoven.unity-mcp-bridge": "https://github.com/Nexonium/unity-mcp-bridge.git"
+    "com.nexonium.unity-mcp-bridge": "https://github.com/Nexonium/unity-mcp-bridge.git#v1.0.0"
   }
 }
 ```
+
+**Option C: Download and Install Locally**
+
+1. Download or clone this repository
+2. In Unity, go to **Window > Package Manager**
+3. Click **+** > **Add package from disk...**
+4. Navigate to the downloaded folder and select `package.json`
 
 ### Step 2: Build MCP Server
 
