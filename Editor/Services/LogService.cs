@@ -23,10 +23,19 @@ namespace UnityMCPBridge.Services
 
         public int MaxEntries
         {
-            get => _maxEntries;
+            get
+            {
+                lock (_lock)
+                {
+                    return _maxEntries;
+                }
+            }
             set
             {
-                _maxEntries = Math.Max(10, value);
+                lock (_lock)
+                {
+                    _maxEntries = Math.Max(10, value);
+                }
                 TrimExcessEntries();
             }
         }

@@ -174,7 +174,14 @@ namespace UnityMCPBridge.Server
                 }
                 finally
                 {
-                    command.WaitHandle.Set();
+                    try
+                    {
+                        command.WaitHandle?.Set();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // WaitHandle was disposed due to timeout - request already returned 504
+                    }
                     processed++;
                 }
             }
