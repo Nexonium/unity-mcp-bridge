@@ -8,6 +8,13 @@ import {
   ActionResponse,
   ScreenshotRequest,
   ScreenshotResponse,
+  OpenAssetRequest,
+  OpenAssetResponse,
+  SelectObjectRequest,
+  SelectObjectResponse,
+  FrameSelectedResponse,
+  GetHierarchyRequest,
+  GetHierarchyResponse,
 } from './types.js';
 
 /**
@@ -140,6 +147,39 @@ export class UnityClient {
       view: options.view ?? 'game',
       quality: options.quality ?? 'low',
     });
+  }
+
+  /**
+   * Opens an asset in Unity Editor (prefab, scene, script, etc.).
+   * @param options Asset path to open
+   */
+  async openAsset(options: OpenAssetRequest): Promise<OpenAssetResponse> {
+    return this.request<OpenAssetResponse>('/editor/open-asset', 'POST', {
+      path: options.path,
+    });
+  }
+
+  /**
+   * Selects a GameObject in the scene hierarchy.
+   * @param options Object path or name to select
+   */
+  async selectObject(options: SelectObjectRequest): Promise<SelectObjectResponse> {
+    return this.request<SelectObjectResponse>('/editor/select-object', 'POST', options);
+  }
+
+  /**
+   * Frames the currently selected object in Scene View (like pressing F).
+   */
+  async frameSelected(): Promise<FrameSelectedResponse> {
+    return this.request<FrameSelectedResponse>('/editor/frame-selected', 'POST');
+  }
+
+  /**
+   * Gets the hierarchy of GameObjects in the current scene or prefab.
+   * @param options Options for hierarchy retrieval
+   */
+  async getHierarchy(options: GetHierarchyRequest = {}): Promise<GetHierarchyResponse> {
+    return this.request<GetHierarchyResponse>('/editor/hierarchy', 'GET', options.maxDepth ? { maxDepth: options.maxDepth } : undefined);
   }
 
   /**

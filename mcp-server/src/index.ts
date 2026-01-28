@@ -157,6 +157,58 @@ class UnityMCPServer {
             },
           },
         },
+        {
+          name: 'unity_open_asset',
+          description: 'Open an asset in Unity Editor. Prefabs open in Prefab Mode, scenes load as the active scene, scripts open in the code editor.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              path: {
+                type: 'string',
+                description: 'Asset path relative to project root (e.g., "Assets/Prefabs/Player.prefab")',
+              },
+            },
+            required: ['path'],
+          },
+        },
+        {
+          name: 'unity_select_object',
+          description: 'Select a GameObject in the current scene hierarchy. Use with unity_frame_selected to focus the camera on it.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              path: {
+                type: 'string',
+                description: 'Full hierarchy path to the object (e.g., "Canvas/Panel/Button"). Use "/" to separate parent/child.',
+              },
+              name: {
+                type: 'string',
+                description: 'Object name to search for (finds first match). Use if you don\'t know the full path.',
+              },
+            },
+          },
+        },
+        {
+          name: 'unity_frame_selected',
+          description: 'Frame the currently selected object in Scene View (equivalent to pressing F in Unity). Centers the camera on the selected object.',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'unity_get_hierarchy',
+          description: 'Get the hierarchy of GameObjects in the current scene or prefab. Useful to discover object names and paths before using unity_select_object.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              maxDepth: {
+                type: 'number',
+                description: 'Maximum depth to traverse (default: 10). Use lower values for large hierarchies.',
+              },
+            },
+          },
+        },
       ],
     }));
 
@@ -198,6 +250,18 @@ class UnityMCPServer {
 
           case 'unity_screenshot':
             return await this.handleScreenshot(args as { view?: string; quality?: string });
+
+          case 'unity_open_asset':
+            return await this.handleOpenAsset(args as { path: string });
+
+          case 'unity_select_object':
+            return await this.handleSelectObject(args as { path?: string; name?: string });
+
+          case 'unity_frame_selected':
+            return await this.handleFrameSelected();
+
+          case 'unity_get_hierarchy':
+            return await this.handleGetHierarchy(args as { maxDepth?: number });
 
           default:
             return {
@@ -359,6 +423,97 @@ class UnityMCPServer {
     ].join('\n');
 
     return { content: [{ type: 'text', text }] };
+  }
+
+  private async handleOpenAsset(args: { path: string }) {
+    if (!args.path) {
+      return {
+        content: [{ type: 'text', text: 'Error: path parameter is required' }],
+        isError: true,
+      };
+    }
+
+    const response = await this.unityClient.openAsset({ path: args.path });
+
+    if (!response.success) {
+      return {
+        content: [{ type: 'text', text: `Failed to open asset: ${response.error}` }],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [{ type: 'text', text: `${response.message} (${response.assetType})` }],
+    };
+  }
+
+  private async handleSelectObject(args: { path?: string; name?: string }) {
+    if (!args.path && !args.name) {
+      return {
+        content: [{ type: 'text', text: 'Error: provide either path or name parameter' }],
+        isError: true,
+      };
+    }
+
+    const response = await this.unityClient.selectObject(args);
+
+    if (!response.success) {
+      return {
+        content: [{ type: 'text', text: `Failed to select object: ${response.error}` }],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [{ type: 'text', text: response.message ?? `Selected: ${response.objectName}` }],
+    };
+  }
+
+  private async handleFrameSelected() {
+    const response = await this.unityClient.frameSelected();
+
+    if (!response.success) {
+      return {
+        content: [{ type: 'text', text: `Failed to frame selected: ${response.error}` }],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [{ type: 'text', text: response.message ?? `Framed: ${response.objectName}` }],
+    };
+  }
+
+  private async handleGetHierarchy(args: { maxDepth?: number }) {
+    const response = await this.unityClient.getHierarchy({ maxDepth: args.maxDepth });
+
+    if (!response.success) {
+      return {
+        content: [{ type: 'text', text: `Failed to get hierarchy: ${response.error}` }],
+        isError: true,
+      };
+    }
+
+    const modeInfo = response.inPrefabMode 
+      ? `Prefab Mode: ${response.prefabName}` 
+      : 'Scene Mode';
+
+    // Format hierarchy as tree
+    const lines: string[] = [
+      `${modeInfo} (${response.objectCount} objects)`,
+      '',
+    ];
+
+    for (const item of response.hierarchy) {
+      const indent = '  '.repeat(item.depth);
+      const activeMarker = item.active ? '' : ' [inactive]';
+      const childInfo = item.childCount > 0 ? ` (${item.childCount} children)` : '';
+      lines.push(`${indent}- ${item.name}${childInfo}${activeMarker}`);
+    }
+
+    return {
+      content: [{ type: 'text', text: lines.join('\n') }],
+    };
   }
 
   private setupErrorHandling(): void {

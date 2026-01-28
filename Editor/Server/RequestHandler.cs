@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityMCPBridge.Core;
 
@@ -48,6 +49,10 @@ namespace UnityMCPBridge.Server
                     "/editor/pause" when method == "POST" => HandlePause(),
                     "/editor/refresh" when method == "POST" => HandleRefresh(),
                     "/editor/screenshot" when method == "POST" => HandleScreenshot(body),
+                    "/editor/open-asset" when method == "POST" => HandleOpenAsset(body),
+                    "/editor/select-object" when method == "POST" => HandleSelectObject(body),
+                    "/editor/frame-selected" when method == "POST" => HandleFrameSelected(),
+                    "/editor/hierarchy" => HandleGetHierarchy(body),
                     _ => (404, "application/json", ToJson(new Dictionary<string, object>
                     {
                         ["error"] = "Not found",
@@ -279,6 +284,280 @@ namespace UnityMCPBridge.Server
                 ["quality"] = quality.ToString().ToLowerInvariant(),
                 ["timestamp"] = result.Timestamp.ToString("o")
             }));
+        }
+
+        private (int, string, string) HandleOpenAsset(string body)
+        {
+            if (string.IsNullOrEmpty(body) || !body.Contains("\"path\""))
+            {
+                return (400, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = "Missing 'path' parameter"
+                }));
+            }
+
+            // Extract path from JSON body
+            var pathMatch = System.Text.RegularExpressions.Regex.Match(body, "\"path\"\\s*:\\s*\"([^\"]+)\"");
+            if (!pathMatch.Success)
+            {
+                return (400, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = "Invalid 'path' parameter"
+                }));
+            }
+
+            var assetPath = pathMatch.Groups[1].Value;
+            var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
+
+            if (asset == null)
+            {
+                return (404, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = $"Asset not found: {assetPath}"
+                }));
+            }
+
+            // Open the asset (prefab opens in Prefab Mode, scene opens as scene, etc.)
+            AssetDatabase.OpenAsset(asset);
+
+            return (200, "application/json", ToJson(new Dictionary<string, object>
+            {
+                ["success"] = true,
+                ["message"] = $"Opened asset: {assetPath}",
+                ["assetType"] = asset.GetType().Name
+            }));
+        }
+
+        private (int, string, string) HandleSelectObject(string body)
+        {
+            if (string.IsNullOrEmpty(body))
+            {
+                return (400, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = "Missing request body"
+                }));
+            }
+
+            // Check if we're in Prefab Mode
+            var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+            var inPrefabMode = prefabStage != null;
+
+            // Try to find by path first
+            var pathMatch = System.Text.RegularExpressions.Regex.Match(body, "\"path\"\\s*:\\s*\"([^\"]+)\"");
+            if (pathMatch.Success)
+            {
+                var objectPath = pathMatch.Groups[1].Value;
+                GameObject foundObject = null;
+
+                if (inPrefabMode)
+                {
+                    // In Prefab Mode, search from prefab root
+                    var root = prefabStage.prefabContentsRoot;
+                    if (root.name == objectPath || objectPath == "/")
+                    {
+                        foundObject = root;
+                    }
+                    else
+                    {
+                        // Remove leading slash and root name if present
+                        var searchPath = objectPath.TrimStart('/');
+                        if (searchPath.StartsWith(root.name + "/"))
+                        {
+                            searchPath = searchPath.Substring(root.name.Length + 1);
+                        }
+                        var childTransform = root.transform.Find(searchPath);
+                        foundObject = childTransform?.gameObject;
+                    }
+                }
+                else
+                {
+                    foundObject = GameObject.Find(objectPath);
+                }
+
+                if (foundObject != null)
+                {
+                    Selection.activeGameObject = foundObject;
+                    return (200, "application/json", ToJson(new Dictionary<string, object>
+                    {
+                        ["success"] = true,
+                        ["message"] = $"Selected object: {foundObject.name}",
+                        ["objectName"] = foundObject.name,
+                        ["inPrefabMode"] = inPrefabMode
+                    }));
+                }
+
+                return (404, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = $"Object not found: {objectPath}",
+                    ["inPrefabMode"] = inPrefabMode
+                }));
+            }
+
+            // Try to find by name
+            var nameMatch = System.Text.RegularExpressions.Regex.Match(body, "\"name\"\\s*:\\s*\"([^\"]+)\"");
+            if (nameMatch.Success)
+            {
+                var objectName = nameMatch.Groups[1].Value;
+                GameObject foundObject = null;
+
+                if (inPrefabMode)
+                {
+                    // In Prefab Mode, search recursively in prefab hierarchy
+                    var root = prefabStage.prefabContentsRoot;
+                    foundObject = FindChildByNameRecursive(root.transform, objectName);
+                }
+                else
+                {
+                    var allObjects = UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+                    foundObject = allObjects.FirstOrDefault(o => o.name == objectName);
+                }
+
+                if (foundObject != null)
+                {
+                    Selection.activeGameObject = foundObject;
+                    return (200, "application/json", ToJson(new Dictionary<string, object>
+                    {
+                        ["success"] = true,
+                        ["message"] = $"Selected object: {foundObject.name}",
+                        ["objectName"] = foundObject.name,
+                        ["inPrefabMode"] = inPrefabMode
+                    }));
+                }
+
+                return (404, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = $"Object not found by name: {objectName}",
+                    ["inPrefabMode"] = inPrefabMode
+                }));
+            }
+
+            return (400, "application/json", ToJson(new Dictionary<string, object>
+            {
+                ["success"] = false,
+                ["error"] = "Provide 'path' or 'name' parameter"
+            }));
+        }
+
+        private static GameObject FindChildByNameRecursive(Transform parent, string name)
+        {
+            if (parent.name == name)
+            {
+                return parent.gameObject;
+            }
+
+            foreach (Transform child in parent)
+            {
+                var found = FindChildByNameRecursive(child, name);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            return null;
+        }
+
+        private (int, string, string) HandleFrameSelected()
+        {
+            if (Selection.activeGameObject == null && Selection.activeObject == null)
+            {
+                return (400, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = "No object selected"
+                }));
+            }
+
+            // Frame the selected object in Scene View
+            var sceneView = SceneView.lastActiveSceneView;
+            if (sceneView != null)
+            {
+                sceneView.FrameSelected();
+                return (200, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = true,
+                    ["message"] = $"Framed selected object: {Selection.activeObject?.name ?? "unknown"}",
+                    ["objectName"] = Selection.activeObject?.name
+                }));
+            }
+
+            return (500, "application/json", ToJson(new Dictionary<string, object>
+            {
+                ["success"] = false,
+                ["error"] = "No active Scene View"
+            }));
+        }
+
+        private (int, string, string) HandleGetHierarchy(string body)
+        {
+            var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+            var inPrefabMode = prefabStage != null;
+
+            // Parse max depth from body (default: 10)
+            var maxDepth = 10;
+            if (!string.IsNullOrEmpty(body))
+            {
+                var depthMatch = System.Text.RegularExpressions.Regex.Match(body, "\"maxDepth\"\\s*:\\s*(\\d+)");
+                if (depthMatch.Success)
+                {
+                    maxDepth = int.Parse(depthMatch.Groups[1].Value);
+                }
+            }
+
+            var hierarchyItems = new List<Dictionary<string, object>>();
+
+            if (inPrefabMode)
+            {
+                // Get hierarchy from prefab root
+                var root = prefabStage.prefabContentsRoot;
+                BuildHierarchy(root.transform, hierarchyItems, 0, maxDepth, "");
+            }
+            else
+            {
+                // Get hierarchy from scene root objects
+                var rootObjects = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+                foreach (var root in rootObjects)
+                {
+                    BuildHierarchy(root.transform, hierarchyItems, 0, maxDepth, "");
+                }
+            }
+
+            return (200, "application/json", ToJson(new Dictionary<string, object>
+            {
+                ["success"] = true,
+                ["inPrefabMode"] = inPrefabMode,
+                ["prefabName"] = inPrefabMode ? prefabStage.prefabContentsRoot.name : null,
+                ["objectCount"] = hierarchyItems.Count,
+                ["hierarchy"] = hierarchyItems
+            }));
+        }
+
+        private static void BuildHierarchy(Transform transform, List<Dictionary<string, object>> items, int depth, int maxDepth, string parentPath)
+        {
+            var path = string.IsNullOrEmpty(parentPath) ? transform.name : $"{parentPath}/{transform.name}";
+            
+            items.Add(new Dictionary<string, object>
+            {
+                ["name"] = transform.name,
+                ["path"] = path,
+                ["depth"] = depth,
+                ["childCount"] = transform.childCount,
+                ["active"] = transform.gameObject.activeSelf
+            });
+
+            if (depth < maxDepth)
+            {
+                foreach (Transform child in transform)
+                {
+                    BuildHierarchy(child, items, depth + 1, maxDepth, path);
+                }
+            }
         }
 
         private static string ToJson(object obj) => JsonSerializer.Serialize(obj);

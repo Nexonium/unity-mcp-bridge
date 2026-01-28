@@ -136,3 +136,82 @@ export interface ScreenshotResponse {
   /** Error message if capture failed */
   error?: string;
 }
+
+/**
+ * Open asset request parameters.
+ */
+export interface OpenAssetRequest {
+  /** Asset path relative to project (e.g., "Assets/Prefabs/Player.prefab") */
+  path: string;
+}
+
+/**
+ * Open asset response.
+ */
+export interface OpenAssetResponse {
+  success: boolean;
+  message?: string;
+  assetType?: string;
+  error?: string;
+}
+
+/**
+ * Select object request parameters.
+ */
+export interface SelectObjectRequest {
+  /** Full hierarchy path to the object (e.g., "Canvas/Panel/Button") */
+  path?: string;
+  /** Object name to search for */
+  name?: string;
+}
+
+/**
+ * Select object response.
+ */
+export interface SelectObjectResponse {
+  success: boolean;
+  message?: string;
+  objectName?: string;
+  error?: string;
+}
+
+/**
+ * Frame selected response.
+ */
+export interface FrameSelectedResponse {
+  success: boolean;
+  message?: string;
+  objectName?: string;
+  error?: string;
+}
+
+/**
+ * Hierarchy item representing a GameObject.
+ */
+export interface HierarchyItem {
+  name: string;
+  path: string;
+  depth: number;
+  childCount: number;
+  active: boolean;
+}
+
+/**
+ * Get hierarchy request parameters.
+ */
+export interface GetHierarchyRequest {
+  /** Maximum depth to traverse (default: 10) */
+  maxDepth?: number;
+}
+
+/**
+ * Get hierarchy response.
+ */
+export interface GetHierarchyResponse {
+  success: boolean;
+  inPrefabMode: boolean;
+  prefabName?: string;
+  objectCount: number;
+  hierarchy: HierarchyItem[];
+  error?: string;
+}
