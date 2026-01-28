@@ -33,9 +33,9 @@ namespace UnityMCPBridge.Server
         public event Action OnServerStopped;
         public event Action<string> OnServerError;
 
-        public HttpServer(ILogService logService, ICompilationService compilationService)
+        public HttpServer(ILogService logService, ICompilationService compilationService, IScreenshotService screenshotService)
         {
-            _requestHandler = new RequestHandler(logService, compilationService);
+            _requestHandler = new RequestHandler(logService, compilationService, screenshotService);
             Port = MCPBridgeSettings.Port;
         }
 

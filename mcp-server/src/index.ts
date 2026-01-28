@@ -138,6 +138,25 @@ class UnityMCPServer {
             properties: {},
           },
         },
+        {
+          name: 'unity_screenshot',
+          description: 'Take a screenshot of the Unity Editor view. Returns the file path to the screenshot. Use the Read tool to view the image after capturing. Default quality is "low" (~400-600 tokens). Use "medium" (~1200 tokens) or "high" (2700+ tokens) only when more detail is needed.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              view: {
+                type: 'string',
+                description: 'Which view to capture: "game" (Game View) or "scene" (Scene View)',
+                enum: ['game', 'scene'],
+              },
+              quality: {
+                type: 'string',
+                description: 'Screenshot quality: "low" (640x480, ~500 tokens), "medium" (1280x720, ~1200 tokens), "high" (native resolution, ~2700+ tokens)',
+                enum: ['low', 'medium', 'high'],
+              },
+            },
+          },
+        },
       ],
     }));
 
@@ -176,6 +195,9 @@ class UnityMCPServer {
 
           case 'unity_refresh':
             return await this.handleRefresh();
+
+          case 'unity_screenshot':
+            return await this.handleScreenshot(args as { view?: string; quality?: string });
 
           default:
             return {
@@ -310,6 +332,33 @@ class UnityMCPServer {
   private async handleRefresh() {
     const response = await this.unityClient.refresh();
     return { content: [{ type: 'text', text: response.message }] };
+  }
+
+  private async handleScreenshot(args: { view?: string; quality?: string }) {
+    const response = await this.unityClient.takeScreenshot({
+      view: (args.view as 'game' | 'scene') ?? 'game',
+      quality: (args.quality as 'low' | 'medium' | 'high') ?? 'low',
+    });
+
+    if (!response.success) {
+      return {
+        content: [{ type: 'text', text: `Screenshot failed: ${response.error}` }],
+        isError: true,
+      };
+    }
+
+    const text = [
+      `Screenshot captured successfully!`,
+      `- File: ${response.filePath}`,
+      `- Size: ${response.width}x${response.height}`,
+      `- View: ${response.view}`,
+      `- Quality: ${response.quality}`,
+      `- Estimated tokens: ~${response.estimatedTokens}`,
+      ``,
+      `Use the Read tool with the file path above to view the image.`,
+    ].join('\n');
+
+    return { content: [{ type: 'text', text }] };
   }
 
   private setupErrorHandling(): void {

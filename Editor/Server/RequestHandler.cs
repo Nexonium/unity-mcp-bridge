@@ -15,11 +15,13 @@ namespace UnityMCPBridge.Server
     {
         private readonly ILogService _logService;
         private readonly ICompilationService _compilationService;
+        private readonly IScreenshotService _screenshotService;
 
-        public RequestHandler(ILogService logService, ICompilationService compilationService)
+        public RequestHandler(ILogService logService, ICompilationService compilationService, IScreenshotService screenshotService)
         {
             _logService = logService ?? throw new ArgumentNullException(nameof(logService));
             _compilationService = compilationService ?? throw new ArgumentNullException(nameof(compilationService));
+            _screenshotService = screenshotService ?? throw new ArgumentNullException(nameof(screenshotService));
         }
 
         /// <summary>
@@ -45,6 +47,7 @@ namespace UnityMCPBridge.Server
                     "/editor/stop" when method == "POST" => HandleStop(),
                     "/editor/pause" when method == "POST" => HandlePause(),
                     "/editor/refresh" when method == "POST" => HandleRefresh(),
+                    "/editor/screenshot" when method == "POST" => HandleScreenshot(body),
                     _ => (404, "application/json", ToJson(new Dictionary<string, object>
                     {
                         ["error"] = "Not found",
@@ -214,6 +217,67 @@ namespace UnityMCPBridge.Server
             {
                 ["success"] = true,
                 ["message"] = "Asset database refreshed"
+            }));
+        }
+
+        private (int, string, string) HandleScreenshot(string body)
+        {
+            // Parse request body for parameters
+            var view = ScreenshotView.Game;
+            var quality = ScreenshotQuality.Low;
+
+            if (!string.IsNullOrEmpty(body))
+            {
+                try
+                {
+                    // Simple JSON parsing for view and quality parameters
+                    if (body.Contains("\"view\""))
+                    {
+                        if (body.Contains("\"scene\"", StringComparison.OrdinalIgnoreCase))
+                        {
+                            view = ScreenshotView.Scene;
+                        }
+                    }
+                    if (body.Contains("\"quality\""))
+                    {
+                        if (body.Contains("\"medium\"", StringComparison.OrdinalIgnoreCase))
+                        {
+                            quality = ScreenshotQuality.Medium;
+                        }
+                        else if (body.Contains("\"high\"", StringComparison.OrdinalIgnoreCase))
+                        {
+                            quality = ScreenshotQuality.High;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[MCP Bridge] Failed to parse screenshot parameters: {ex.Message}");
+                }
+            }
+
+            var result = _screenshotService.CaptureScreenshot(view, quality);
+
+            if (!result.Success)
+            {
+                return (500, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = result.ErrorMessage
+                }));
+            }
+
+            return (200, "application/json", ToJson(new Dictionary<string, object>
+            {
+                ["success"] = true,
+                ["filePath"] = result.FilePath,
+                ["width"] = result.Width,
+                ["height"] = result.Height,
+                ["fileSize"] = result.FileSize,
+                ["estimatedTokens"] = result.EstimatedTokens,
+                ["view"] = view.ToString().ToLowerInvariant(),
+                ["quality"] = quality.ToString().ToLowerInvariant(),
+                ["timestamp"] = result.Timestamp.ToString("o")
             }));
         }
 

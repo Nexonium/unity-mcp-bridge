@@ -91,3 +91,48 @@ export interface ActionResponse {
   message: string;
   isPaused?: boolean;
 }
+
+/**
+ * Screenshot quality preset.
+ */
+export type ScreenshotQuality = 'low' | 'medium' | 'high';
+
+/**
+ * Screenshot view type.
+ */
+export type ScreenshotView = 'game' | 'scene';
+
+/**
+ * Screenshot capture request parameters.
+ */
+export interface ScreenshotRequest {
+  /** View to capture (game or scene). Default: game */
+  view?: ScreenshotView;
+  /** Quality preset (low, medium, high). Default: low */
+  quality?: ScreenshotQuality;
+}
+
+/**
+ * Screenshot capture response.
+ */
+export interface ScreenshotResponse {
+  success: boolean;
+  /** Absolute path to the screenshot file */
+  filePath?: string;
+  /** Image width in pixels */
+  width?: number;
+  /** Image height in pixels */
+  height?: number;
+  /** File size in bytes */
+  fileSize?: number;
+  /** Estimated token cost for AI processing */
+  estimatedTokens?: number;
+  /** View that was captured */
+  view?: ScreenshotView;
+  /** Quality preset used */
+  quality?: ScreenshotQuality;
+  /** Timestamp when screenshot was taken */
+  timestamp?: string;
+  /** Error message if capture failed */
+  error?: string;
+}

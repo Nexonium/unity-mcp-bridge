@@ -6,6 +6,8 @@ import {
   CompilationWarningsResponse,
   CompilationStatus,
   ActionResponse,
+  ScreenshotRequest,
+  ScreenshotResponse,
 } from './types.js';
 
 /**
@@ -26,7 +28,7 @@ export class UnityClient {
   /**
    * Makes an HTTP request to Unity.
    */
-  private async request<T>(path: string, method: 'GET' | 'POST' = 'GET'): Promise<T> {
+  private async request<T>(path: string, method: 'GET' | 'POST' = 'GET', body?: unknown): Promise<T> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
@@ -36,6 +38,7 @@ export class UnityClient {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
 
@@ -126,6 +129,17 @@ export class UnityClient {
    */
   async refresh(): Promise<ActionResponse> {
     return this.request<ActionResponse>('/editor/refresh', 'POST');
+  }
+
+  /**
+   * Takes a screenshot of the specified Unity view.
+   * @param options Screenshot options (view and quality)
+   */
+  async takeScreenshot(options: ScreenshotRequest = {}): Promise<ScreenshotResponse> {
+    return this.request<ScreenshotResponse>('/editor/screenshot', 'POST', {
+      view: options.view ?? 'game',
+      quality: options.quality ?? 'low',
+    });
   }
 
   /**

@@ -16,6 +16,7 @@ namespace UnityMCPBridge.Core
     {
         private static ILogService _logService;
         private static ICompilationService _compilationService;
+        private static IScreenshotService _screenshotService;
         private static IHttpServer _httpServer;
         private static bool _initialized;
 
@@ -28,6 +29,11 @@ namespace UnityMCPBridge.Core
         /// Gets the compilation service instance.
         /// </summary>
         public static ICompilationService CompilationService => _compilationService;
+
+        /// <summary>
+        /// Gets the screenshot service instance.
+        /// </summary>
+        public static IScreenshotService ScreenshotService => _screenshotService;
 
         /// <summary>
         /// Gets the HTTP server instance.
@@ -67,7 +73,8 @@ namespace UnityMCPBridge.Core
             // Create services
             _logService = new LogService();
             _compilationService = new CompilationService();
-            _httpServer = new HttpServer(_logService, _compilationService);
+            _screenshotService = new ScreenshotService();
+            _httpServer = new HttpServer(_logService, _compilationService, _screenshotService);
 
             // Subscribe to domain unload for cleanup
             AppDomain.CurrentDomain.DomainUnload += OnDomainUnload;
@@ -102,6 +109,7 @@ namespace UnityMCPBridge.Core
 
             _logService.Start();
             _compilationService.Start();
+            _screenshotService.Start();
             _httpServer.Start();
 
             OnBridgeStarted?.Invoke();
@@ -115,6 +123,7 @@ namespace UnityMCPBridge.Core
             if (!IsRunning) return;
 
             _httpServer?.Stop();
+            _screenshotService?.Stop();
             _compilationService?.Stop();
             _logService?.Stop();
 
@@ -141,6 +150,7 @@ namespace UnityMCPBridge.Core
             }
 
             _httpServer = null;
+            _screenshotService = null;
             _compilationService = null;
             _logService = null;
             _initialized = false;
