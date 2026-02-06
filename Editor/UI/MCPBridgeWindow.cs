@@ -76,6 +76,8 @@ namespace UnityMCPBridge.UI
             EditorGUILayout.Space(10);
             DrawSettingsSection();
             EditorGUILayout.Space(10);
+            DrawScreenshotSection();
+            EditorGUILayout.Space(10);
             DrawStatsSection();
             EditorGUILayout.Space(10);
             DrawAdvancedSection();
@@ -188,6 +190,65 @@ namespace UnityMCPBridge.UI
                 {
                     MCPBridge.LogService.MaxEntries = maxLogs;
                 }
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawScreenshotSection()
+        {
+            EditorGUILayout.LabelField("Screenshots", _headerStyle);
+
+            EditorGUILayout.BeginVertical(_statusBoxStyle);
+
+            // Default quality
+            var qualityLabels = new[] { "Low (640x480, ~500 tokens)", "Medium (1280x720, ~1200 tokens)", "High (native, ~2700+ tokens)" };
+            var quality = EditorGUILayout.Popup(
+                new GUIContent("Default Quality", "Default screenshot quality when not specified in the request"),
+                MCPBridgeSettings.ScreenshotQuality,
+                qualityLabels
+            );
+            if (quality != MCPBridgeSettings.ScreenshotQuality)
+            {
+                MCPBridgeSettings.ScreenshotQuality = quality;
+            }
+
+            EditorGUILayout.Space(5);
+
+            // Auto-cleanup
+            var cleanupMinutes = EditorGUILayout.IntField(
+                new GUIContent("Auto-cleanup (minutes)", "Delete screenshots older than this. 0 = disabled."),
+                MCPBridgeSettings.ScreenshotCleanupMinutes
+            );
+            if (cleanupMinutes != MCPBridgeSettings.ScreenshotCleanupMinutes)
+            {
+                MCPBridgeSettings.ScreenshotCleanupMinutes = cleanupMinutes;
+            }
+
+            EditorGUILayout.Space(5);
+
+            // Screenshot directory info
+            if (MCPBridge.IsRunning && MCPBridge.ScreenshotService != null)
+            {
+                EditorGUILayout.LabelField("Directory:", MCPBridge.ScreenshotService.ScreenshotDirectory, EditorStyles.miniLabel);
+
+                EditorGUILayout.Space(5);
+
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Open Folder"))
+                {
+                    var dir = MCPBridge.ScreenshotService.ScreenshotDirectory;
+                    if (System.IO.Directory.Exists(dir))
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", dir.Replace("/", "\\"));
+                    }
+                }
+                if (GUILayout.Button("Cleanup Now"))
+                {
+                    var deleted = MCPBridge.ScreenshotService.CleanupOldScreenshots(0);
+                    Debug.Log($"[MCP Bridge] Cleaned up {deleted} screenshot(s)");
+                }
+                EditorGUILayout.EndHorizontal();
             }
 
             EditorGUILayout.EndVertical();

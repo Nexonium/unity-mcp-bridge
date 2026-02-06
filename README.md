@@ -4,29 +4,30 @@
     <strong>Connect AI assistants to Unity Editor via Model Context Protocol</strong>
   </p>
   <p align="center">
-    <a href="#features">Features</a> •
-    <a href="#installation">Installation</a> •
-    <a href="#usage">Usage</a> •
-    <a href="#available-tools">Tools</a> •
-    <a href="#configuration">Configuration</a> •
+    <a href="#features">Features</a> &bull;
+    <a href="#installation">Installation</a> &bull;
+    <a href="#usage">Usage</a> &bull;
+    <a href="#available-tools">Tools</a> &bull;
+    <a href="#configuration">Configuration</a> &bull;
     <a href="#troubleshooting">Troubleshooting</a>
   </p>
 </p>
 
 ---
 
-Unity MCP Bridge enables AI assistants like **Claude in Cursor** to interact directly with Unity Editor. Read console logs, check compilation errors, control Play Mode, and more — all without leaving your code editor.
+Unity MCP Bridge enables AI assistants like **Claude in Cursor** to interact directly with Unity Editor. Read console logs, check compilation errors, control Play Mode, capture screenshots, navigate assets, and more — all without leaving your code editor.
 
 ## Features
 
 - **Console Logs** — Real-time access to Unity console with filtering by type (log/warning/error)
 - **Compilation Errors** — Instant notification of C# compilation errors and warnings with file paths and line numbers
 - **Play Mode Control** — Start, stop, and pause Play Mode remotely
+- **Screenshots** — Capture Game View and Scene View with configurable quality (low/medium/high)
+- **Asset Navigation** — Open prefabs, scenes, and scripts; select and frame objects in the hierarchy
+- **Hierarchy Inspection** — View the full GameObject hierarchy of scenes and prefabs
 - **Asset Refresh** — Trigger asset database refresh after code changes
 - **Background Operation** — Works even when Unity is not in focus (for most operations)
 - **Easy Setup** — Simple installation via Unity Package Manager
-
-> **Coming Soon:** Test execution, GameObject inspection, scene management
 
 ## Requirements
 
@@ -51,7 +52,7 @@ Unity MCP Bridge enables AI assistants like **Claude in Cursor** to interact dir
 
 To install a specific version, append the tag:
 ```
-https://github.com/Nexonium/unity-mcp-bridge.git#v1.0.0
+https://github.com/Nexonium/unity-mcp-bridge.git#v1.1.0
 ```
 
 **Option B: Add to manifest.json**
@@ -61,7 +62,7 @@ Add to your `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.nexonium.unity-mcp-bridge": "https://github.com/Nexonium/unity-mcp-bridge.git#v1.0.0"
+    "com.nexonium.unity-mcp-bridge": "https://github.com/Nexonium/unity-mcp-bridge.git#v1.1.0"
   }
 }
 ```
@@ -103,7 +104,7 @@ Add to your Cursor MCP settings file:
 
 ### Step 4: Start the Server
 
-1. In Unity, go to **Window > Unity MCP Bridge**
+1. In Unity, go to **Window > Unity MCP Bridge > Server**
 2. Click **Start Server**
 3. (Optional) Enable **Auto-start on Unity Open** for convenience
 4. Restart Cursor to load the MCP server
@@ -114,36 +115,77 @@ Once configured, the AI assistant in Cursor can use Unity tools automatically. T
 
 - *"Check if there are any compilation errors"*
 - *"Show me the recent Unity console logs"*
-- *"Start Play Mode"*
-- *"Refresh the asset database"*
+- *"Start Play Mode and take a screenshot"*
+- *"Open the Player prefab and show me its hierarchy"*
+- *"Take a screenshot of the Scene View"*
 
-### Example Workflow
+### Example Workflows
+
+**Debugging workflow:**
 
 1. You edit a C# file in Cursor
 2. Ask: *"Are there any compilation errors?"*
-3. AI runs `unity_refresh` → `unity_compilation_status` → `unity_get_compilation_errors`
+3. AI runs `unity_refresh` then `unity_get_compilation_errors`
 4. AI shows you errors with file paths and line numbers
 5. You fix the error, AI verifies compilation succeeds
-6. Ask: *"Run the game"* — AI starts Play Mode
+
+**Visual inspection workflow:**
+
+1. Ask: *"Open the MessengerNotification prefab"*
+2. AI runs `unity_open_asset` to enter Prefab Mode
+3. AI runs `unity_get_hierarchy` to see the structure
+4. AI runs `unity_frame_selected` and `unity_screenshot` to capture the view
+5. AI describes what it sees and suggests improvements
 
 ## Available Tools
+
+### Editor Status
 
 | Tool | Description |
 |------|-------------|
 | `unity_status` | Get Unity Editor status (version, project, play mode state) |
+| `unity_compilation_status` | Check if Unity is compiling and error/warning counts |
+
+### Console Logs
+
+| Tool | Description |
+|------|-------------|
 | `unity_get_logs` | Get console logs with optional type filter and limit |
 | `unity_clear_logs` | Clear all stored console logs |
 | `unity_get_compilation_errors` | Get compilation errors with file paths and line numbers |
 | `unity_get_compilation_warnings` | Get compilation warnings |
-| `unity_compilation_status` | Check if Unity is compiling and error/warning counts |
+
+### Play Mode
+
+| Tool | Description |
+|------|-------------|
 | `unity_play` | Enter Play Mode |
 | `unity_stop` | Exit Play Mode |
 | `unity_pause` | Toggle pause state |
 | `unity_refresh` | Refresh Asset Database (triggers recompilation) |
 
+### Screenshots
+
+| Tool | Description |
+|------|-------------|
+| `unity_screenshot` | Capture Game View or Scene View with configurable quality |
+
+**Parameters:**
+- `view` — `"game"` (default) or `"scene"`
+- `quality` — `"low"` (640x480, ~500 tokens), `"medium"` (1280x720, ~1200 tokens), `"high"` (native, ~2700+ tokens)
+
+### Asset Navigation
+
+| Tool | Description |
+|------|-------------|
+| `unity_open_asset` | Open prefab, scene, or script by asset path |
+| `unity_select_object` | Select a GameObject by hierarchy path or name |
+| `unity_frame_selected` | Frame selected object in Scene View (like pressing F) |
+| `unity_get_hierarchy` | Get the full hierarchy of objects in the current scene or prefab |
+
 ## Configuration
 
-### Unity Settings (Window > Unity MCP Bridge)
+### Unity Settings (Window > Unity MCP Bridge > Server)
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -152,6 +194,8 @@ Once configured, the AI assistant in Cursor can use Unity tools automatically. T
 | **Auto-start** | false | Start server automatically when Unity opens |
 | **Include Stack Traces** | true | Include stack traces in log entries |
 | **Include Warnings** | true | Track compilation warnings (not just errors) |
+| **Screenshot Quality** | Low | Default screenshot quality (Low / Medium / High) |
+| **Screenshot Cleanup** | 30 min | Auto-delete screenshots older than this (0 = disabled) |
 
 ### Environment Variables (MCP Server)
 
@@ -164,26 +208,34 @@ Once configured, the AI assistant in Cursor can use Unity tools automatically. T
 ## Architecture
 
 ```
-┌─────────────────┐                          ┌─────────────────┐
-│     Cursor      │◄── MCP Protocol ────────►│   MCP Server    │
-│   (AI Agent)    │       (stdio)            │   (Node.js)     │
-└─────────────────┘                          └────────┬────────┘
-                                                      │
-                                                 HTTP REST
-                                                      │
-                                             ┌────────▼────────┐
-                                             │  Unity Editor   │
-                                             │  (HTTP Server)  │
-                                             │  Port 7890      │
-                                             └─────────────────┘
++-------------------+                          +-------------------+
+|     Cursor        |<--- MCP Protocol ------->|   MCP Server      |
+|   (AI Agent)      |       (stdio)            |   (Node.js)       |
++-------------------+                          +---------+---------+
+                                                         |
+                                                    HTTP REST
+                                                         |
+                                               +---------+---------+
+                                               |  Unity Editor     |
+                                               |  (HTTP Server)    |
+                                               |  Port 7890        |
+                                               +-------------------+
 ```
+
+**Request flow:**
+
+1. AI sends tool call via MCP protocol (stdio)
+2. MCP Server (TypeScript) translates to HTTP request
+3. Unity HTTP Server receives on background thread
+4. Read-only requests handled directly; actions queued for main thread
+5. Response flows back through the same path
 
 ## Troubleshooting
 
 ### "Cannot connect to Unity"
 
 - Make sure Unity Editor is open
-- Check that MCP Bridge server is running (Window > Unity MCP Bridge)
+- Check that MCP Bridge server is running (Window > Unity MCP Bridge > Server)
 - Verify the port matches in both Unity and MCP server config
 
 ### "Request timeout"
@@ -201,6 +253,12 @@ Once configured, the AI assistant in Cursor can use Unity tools automatically. T
 
 This is expected — Unity recompiles and reloads the domain. If **Auto-start** is enabled, the server restarts automatically.
 
+### Screenshots are empty or wrong
+
+- Make sure a Camera exists in the scene (Game View requires a camera)
+- For Scene View screenshots, ensure the Scene View window is open
+- Try using `unity_frame_selected` to position the camera before capturing
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -210,10 +268,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 

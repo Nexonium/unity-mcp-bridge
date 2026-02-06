@@ -15,6 +15,8 @@ namespace UnityMCPBridge.Settings
         private const string AutoStartKey = KeyPrefix + "AutoStart";
         private const string IncludeWarningsKey = KeyPrefix + "IncludeWarnings";
         private const string IncludeStackTraceKey = KeyPrefix + "IncludeStackTrace";
+        private const string ScreenshotQualityKey = KeyPrefix + "ScreenshotQuality";
+        private const string ScreenshotCleanupMinutesKey = KeyPrefix + "ScreenshotCleanupMinutes";
 
         // Default values
         private const int DefaultPort = 7890;
@@ -22,6 +24,8 @@ namespace UnityMCPBridge.Settings
         private const bool DefaultAutoStart = false;
         private const bool DefaultIncludeWarnings = true;
         private const bool DefaultIncludeStackTrace = true;
+        private const int DefaultScreenshotQuality = 0; // Low
+        private const int DefaultScreenshotCleanupMinutes = 30;
 
         /// <summary>
         /// HTTP server port. Default: 7890
@@ -69,6 +73,24 @@ namespace UnityMCPBridge.Settings
         }
 
         /// <summary>
+        /// Default screenshot quality preset (0=Low, 1=Medium, 2=High). Default: 0 (Low)
+        /// </summary>
+        public static int ScreenshotQuality
+        {
+            get => EditorPrefs.GetInt(ScreenshotQualityKey, DefaultScreenshotQuality);
+            set => EditorPrefs.SetInt(ScreenshotQualityKey, Mathf.Clamp(value, 0, 2));
+        }
+
+        /// <summary>
+        /// Auto-cleanup screenshots older than this many minutes. 0 = disabled. Default: 30
+        /// </summary>
+        public static int ScreenshotCleanupMinutes
+        {
+            get => EditorPrefs.GetInt(ScreenshotCleanupMinutesKey, DefaultScreenshotCleanupMinutes);
+            set => EditorPrefs.SetInt(ScreenshotCleanupMinutesKey, Mathf.Max(0, value));
+        }
+
+        /// <summary>
         /// Resets all settings to their default values.
         /// </summary>
         public static void ResetToDefaults()
@@ -78,6 +100,8 @@ namespace UnityMCPBridge.Settings
             AutoStart = DefaultAutoStart;
             IncludeWarnings = DefaultIncludeWarnings;
             IncludeStackTrace = DefaultIncludeStackTrace;
+            ScreenshotQuality = DefaultScreenshotQuality;
+            ScreenshotCleanupMinutes = DefaultScreenshotCleanupMinutes;
         }
     }
 }
