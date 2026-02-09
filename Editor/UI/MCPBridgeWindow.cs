@@ -78,6 +78,8 @@ namespace UnityMCPBridge.UI
             EditorGUILayout.Space(10);
             DrawScreenshotSection();
             EditorGUILayout.Space(10);
+            DrawTerminalSection();
+            EditorGUILayout.Space(10);
             DrawStatsSection();
             EditorGUILayout.Space(10);
             DrawAdvancedSection();
@@ -250,6 +252,62 @@ namespace UnityMCPBridge.UI
                 }
                 EditorGUILayout.EndHorizontal();
             }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawTerminalSection()
+        {
+            EditorGUILayout.LabelField("Debug Terminal", _headerStyle);
+
+            EditorGUILayout.BeginVertical(_statusBoxStyle);
+
+            // Toggle key
+            var toggleKey = (KeyCode)EditorGUILayout.EnumPopup(
+                new GUIContent("Toggle Key", "Key to open/close the debug terminal in Play Mode"),
+                MCPBridgeSettings.TerminalToggleKey
+            );
+            if (toggleKey != MCPBridgeSettings.TerminalToggleKey)
+            {
+                MCPBridgeSettings.TerminalToggleKey = toggleKey;
+            }
+
+            EditorGUILayout.Space(5);
+
+            // Max log entries
+            var maxLogs = EditorGUILayout.IntField(
+                new GUIContent("Max Log Entries", "Maximum terminal output lines to keep"),
+                MCPBridgeSettings.TerminalMaxLogEntries
+            );
+            if (maxLogs != MCPBridgeSettings.TerminalMaxLogEntries)
+            {
+                MCPBridgeSettings.TerminalMaxLogEntries = maxLogs;
+            }
+
+            // Font size
+            var fontSize = EditorGUILayout.IntSlider(
+                new GUIContent("Font Size", "Terminal font size"),
+                MCPBridgeSettings.TerminalFontSize, 10, 24
+            );
+            if (fontSize != MCPBridgeSettings.TerminalFontSize)
+            {
+                MCPBridgeSettings.TerminalFontSize = fontSize;
+            }
+
+            EditorGUILayout.Space(5);
+
+            // Enabled in builds
+            var enabledInBuilds = EditorGUILayout.Toggle(
+                new GUIContent("Enable in Builds", "Allow terminal in development builds (Debug.isDebugBuild)"),
+                MCPBridgeSettings.TerminalEnabledInBuilds
+            );
+            if (enabledInBuilds != MCPBridgeSettings.TerminalEnabledInBuilds)
+            {
+                MCPBridgeSettings.TerminalEnabledInBuilds = enabledInBuilds;
+            }
+
+            EditorGUILayout.Space(5);
+            EditorGUILayout.HelpBox("The terminal auto-activates in Play Mode. Press the toggle key to show/hide.", MessageType.Info);
 
             EditorGUILayout.EndVertical();
         }

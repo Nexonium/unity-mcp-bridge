@@ -1,0 +1,155 @@
+// =============================================================================
+// Example: Creating Game-Specific Terminal Commands
+// =============================================================================
+//
+// This file demonstrates how to add custom debug commands to the runtime
+// terminal using the [TerminalCommand] attribute.
+//
+// HOW IT WORKS:
+// 1. Create a static class anywhere in your project
+// 2. Add static methods with the [TerminalCommand] attribute
+// 3. The terminal automatically discovers commands via reflection on startup
+// 4. Commands are available immediately in Play Mode
+//
+// RENAME this file to .cs and adapt to your game.
+// =============================================================================
+
+using UnityEngine;
+using UnityMCPBridge.Terminal;
+
+namespace YourGame.Debug
+{
+    /// <summary>
+    /// Custom terminal commands for game debugging.
+    /// Commands are auto-discovered -- just add [TerminalCommand] to any static method.
+    /// </summary>
+    public static class ExampleGameCommands
+    {
+        // ---------------------------------------------------------------------
+        // Basic command: no arguments
+        // ---------------------------------------------------------------------
+        [TerminalCommand("game.status", "Show current game state")]
+        public static string GameStatus(string[] args)
+        {
+            // Replace with your game's state manager
+            return string.Join("\n", new[]
+            {
+                "Game State:",
+                $"  Scene: {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}",
+                $"  Time: {Time.time:F1}s",
+                $"  FPS: {1f / Time.unscaledDeltaTime:F0}",
+            });
+        }
+
+        // ---------------------------------------------------------------------
+        // Command with arguments: give-item <id> [count]
+        // ---------------------------------------------------------------------
+        [TerminalCommand("give-item", "Give an item to the player", "give-item <itemId> [count]")]
+        public static string GiveItem(string[] args)
+        {
+            if (args.Length == 0)
+                return "Usage: give-item <itemId> [count]";
+
+            var itemId = args[0];
+            var count = 1;
+
+            if (args.Length > 1 && !int.TryParse(args[1], out count))
+                return $"Invalid count: '{args[1]}'";
+
+            // Replace with your inventory system:
+            // InventoryManager.Instance.AddItem(itemId, count);
+
+            return $"Gave {count}x '{itemId}' to player.";
+        }
+
+        // ---------------------------------------------------------------------
+        // Toggle command: debug.grid, debug.hitbox
+        // ---------------------------------------------------------------------
+        [TerminalCommand("debug.grid", "Toggle grid overlay visualization")]
+        public static string DebugGrid(string[] args)
+        {
+            // Replace with your grid visualization toggle:
+            // RoomGridManager.Instance.ShowDebugGrid = !RoomGridManager.Instance.ShowDebugGrid;
+            // var state = RoomGridManager.Instance.ShowDebugGrid;
+
+            var state = true; // placeholder
+            return $"Grid overlay: {(state ? "ON" : "OFF")}";
+        }
+
+        // ---------------------------------------------------------------------
+        // List command: order.list
+        // ---------------------------------------------------------------------
+        [TerminalCommand("order.list", "List all active orders")]
+        public static string OrderList(string[] args)
+        {
+            // Replace with your order system:
+            // var orders = OrderManager.Instance.ActiveOrders;
+            // if (orders.Count == 0) return "No active orders.";
+            //
+            // var sb = new System.Text.StringBuilder();
+            // sb.AppendLine($"Active Orders ({orders.Count}):");
+            // foreach (var order in orders)
+            //     sb.AppendLine($"  [{order.Id}] {order.CustomerName} - {order.Status}");
+            // return sb.ToString().TrimEnd();
+
+            return "No order system connected. Implement OrderManager integration.";
+        }
+
+        // ---------------------------------------------------------------------
+        // Action command: order.complete <id>
+        // ---------------------------------------------------------------------
+        [TerminalCommand("order.complete", "Force-complete an order", "order.complete <orderId>")]
+        public static string OrderComplete(string[] args)
+        {
+            if (args.Length == 0)
+                return "Usage: order.complete <orderId>";
+
+            var orderId = args[0];
+
+            // Replace with your order system:
+            // var success = OrderManager.Instance.ForceComplete(orderId);
+            // return success ? $"Order '{orderId}' completed." : $"Order '{orderId}' not found.";
+
+            return $"Would complete order '{orderId}'. Implement OrderManager integration.";
+        }
+
+        // ---------------------------------------------------------------------
+        // Clear/reset command
+        // ---------------------------------------------------------------------
+        [TerminalCommand("room.clear", "Remove all items from the current room")]
+        public static string RoomClear(string[] args)
+        {
+            // Replace with your room system:
+            // RoomEditorManager.Instance.ClearAllItems();
+
+            return "Room cleared.";
+        }
+
+        // ---------------------------------------------------------------------
+        // Spawn command with position
+        // ---------------------------------------------------------------------
+        [TerminalCommand("spawn", "Spawn a prefab at position", "spawn <prefabName> [x] [y]")]
+        public static string Spawn(string[] args)
+        {
+            if (args.Length == 0)
+                return "Usage: spawn <prefabName> [x] [y]";
+
+            var prefabName = args[0];
+            var x = 0f;
+            var y = 0f;
+
+            if (args.Length > 1) float.TryParse(args[1],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out x);
+            if (args.Length > 2) float.TryParse(args[2],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out y);
+
+            // var prefab = Resources.Load<GameObject>($"Prefabs/{prefabName}");
+            // if (prefab == null) return $"Prefab not found: '{prefabName}'";
+            // Object.Instantiate(prefab, new Vector3(x, y, 0), Quaternion.identity);
+
+            return $"Spawned '{prefabName}' at ({x}, {y}).";
+        }
+    }
+}

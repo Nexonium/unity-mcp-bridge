@@ -53,6 +53,11 @@ namespace UnityMCPBridge.Server
                     "/editor/select-object" when method == "POST" => HandleSelectObject(body),
                     "/editor/frame-selected" when method == "POST" => HandleFrameSelected(),
                     "/editor/hierarchy" => HandleGetHierarchy(body),
+                    "/terminal/execute" when method == "POST" => HandleTerminalExecute(body),
+                    "/terminal/execute-batch" when method == "POST" => HandleTerminalExecuteBatch(body),
+                    "/terminal/status" => HandleTerminalStatus(),
+                    "/terminal/logs" => HandleTerminalLogs(body),
+                    "/terminal/history" => HandleTerminalHistory(body),
                     _ => (404, "application/json", ToJson(new Dictionary<string, object>
                     {
                         ["error"] = "Not found",
@@ -558,6 +563,187 @@ namespace UnityMCPBridge.Server
                     BuildHierarchy(child, items, depth + 1, maxDepth, path);
                 }
             }
+        }
+
+        private (int, string, string) HandleTerminalExecute(string body)
+        {
+            if (string.IsNullOrEmpty(body) || !body.Contains("\"command\""))
+            {
+                return (400, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = "Missing 'command' parameter"
+                }));
+            }
+
+            var commandMatch = System.Text.RegularExpressions.Regex.Match(body, "\"command\"\\s*:\\s*\"([^\"]+)\"");
+            if (!commandMatch.Success)
+            {
+                return (400, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = "Invalid 'command' parameter"
+                }));
+            }
+
+            var commandLine = commandMatch.Groups[1].Value;
+            var (success, output, error) = TerminalBridge.ExecuteCommand(commandLine);
+
+            var response = new Dictionary<string, object>
+            {
+                ["success"] = success,
+                ["command"] = commandLine
+            };
+
+            if (output != null) response["output"] = output;
+            if (error != null) response["error"] = error;
+
+            return (200, "application/json", ToJson(response));
+        }
+
+        private (int, string, string) HandleTerminalExecuteBatch(string body)
+        {
+            if (string.IsNullOrEmpty(body) || !body.Contains("\"commands\""))
+            {
+                return (400, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = "Missing 'commands' parameter (expected array)"
+                }));
+            }
+
+            // Extract commands array using regex
+            var arrayMatch = System.Text.RegularExpressions.Regex.Match(body, "\"commands\"\\s*:\\s*\\[([^\\]]*)]");
+            if (!arrayMatch.Success)
+            {
+                return (400, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = "Invalid 'commands' parameter (expected array)"
+                }));
+            }
+
+            var arrayContent = arrayMatch.Groups[1].Value;
+            var commandMatches = System.Text.RegularExpressions.Regex.Matches(arrayContent, "\"([^\"]+)\"");
+
+            if (commandMatches.Count == 0)
+            {
+                return (400, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["success"] = false,
+                    ["error"] = "Empty commands array"
+                }));
+            }
+
+            var results = new List<Dictionary<string, object>>();
+            var allSuccess = true;
+
+            foreach (System.Text.RegularExpressions.Match match in commandMatches)
+            {
+                var commandLine = match.Groups[1].Value;
+                var (success, output, error) = TerminalBridge.ExecuteCommand(commandLine);
+
+                var entry = new Dictionary<string, object>
+                {
+                    ["success"] = success,
+                    ["command"] = commandLine
+                };
+                if (output != null) entry["output"] = output;
+                if (error != null) entry["error"] = error;
+                results.Add(entry);
+
+                if (!success) allSuccess = false;
+            }
+
+            return (200, "application/json", ToJson(new Dictionary<string, object>
+            {
+                ["success"] = allSuccess,
+                ["count"] = results.Count,
+                ["results"] = results
+            }));
+        }
+
+        private (int, string, string) HandleTerminalStatus()
+        {
+            var (active, visible, logCount, commandCount) = TerminalBridge.GetStatus();
+
+            return (200, "application/json", ToJson(new Dictionary<string, object>
+            {
+                ["active"] = active,
+                ["visible"] = visible,
+                ["logCount"] = logCount,
+                ["commandCount"] = commandCount,
+                ["isPlaying"] = EditorStateCache.IsPlaying
+            }));
+        }
+
+        private (int, string, string) HandleTerminalLogs(string body)
+        {
+            var limit = 0;
+            var typeFilter = "all";
+
+            if (!string.IsNullOrEmpty(body))
+            {
+                var limitMatch = System.Text.RegularExpressions.Regex.Match(body, "\"limit\"\\s*:\\s*(\\d+)");
+                if (limitMatch.Success)
+                    limit = int.Parse(limitMatch.Groups[1].Value);
+
+                var typeMatch = System.Text.RegularExpressions.Regex.Match(body, "\"type\"\\s*:\\s*\"([^\"]+)\"");
+                if (typeMatch.Success)
+                    typeFilter = typeMatch.Groups[1].Value.ToLowerInvariant();
+            }
+
+            var (active, logs) = TerminalBridge.GetTerminalLogs(limit, typeFilter);
+
+            if (!active)
+            {
+                return (200, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["active"] = false,
+                    ["error"] = "Debug Terminal is not active. Enter Play Mode first.",
+                    ["count"] = 0,
+                    ["logs"] = Array.Empty<object>()
+                }));
+            }
+
+            return (200, "application/json", ToJson(new Dictionary<string, object>
+            {
+                ["active"] = true,
+                ["count"] = logs.Count,
+                ["logs"] = logs
+            }));
+        }
+
+        private (int, string, string) HandleTerminalHistory(string body)
+        {
+            var limit = 0;
+
+            if (!string.IsNullOrEmpty(body))
+            {
+                var limitMatch = System.Text.RegularExpressions.Regex.Match(body, "\"limit\"\\s*:\\s*(\\d+)");
+                if (limitMatch.Success)
+                    limit = int.Parse(limitMatch.Groups[1].Value);
+            }
+
+            var (active, history) = TerminalBridge.GetTerminalHistory(limit);
+
+            if (!active)
+            {
+                return (200, "application/json", ToJson(new Dictionary<string, object>
+                {
+                    ["active"] = false,
+                    ["error"] = "Debug Terminal is not active. Enter Play Mode first.",
+                    ["count"] = 0,
+                    ["history"] = Array.Empty<string>()
+                }));
+            }
+
+            return (200, "application/json", ToJson(new Dictionary<string, object>
+            {
+                ["active"] = true,
+                ["count"] = history.Count,
+                ["history"] = history
+            }));
         }
 
         private static string ToJson(object obj) => JsonSerializer.Serialize(obj);

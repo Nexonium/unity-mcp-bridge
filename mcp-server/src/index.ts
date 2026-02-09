@@ -28,7 +28,7 @@ class UnityMCPServer {
     this.server = new Server(
       {
         name: 'unity-mcp-server',
-        version: '1.1.0',
+        version: '1.2.0-pre.1',
       },
       {
         capabilities: {
@@ -209,6 +209,74 @@ class UnityMCPServer {
             },
           },
         },
+        {
+          name: 'unity_terminal_execute',
+          description: 'Execute a command in the Unity runtime debug terminal. Requires Play Mode. Use to inspect/modify runtime state (time.scale, find objects, toggle objects, etc.). Use unity_terminal_status first to check if the terminal is available.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              command: {
+                type: 'string',
+                description: 'Command to execute (e.g., "help", "time.scale 0.5", "obj.find Player", "scene", "fps")',
+              },
+            },
+            required: ['command'],
+          },
+        },
+        {
+          name: 'unity_terminal_status',
+          description: 'Get the status of the runtime debug terminal (active, visible, command count). The terminal is only active during Play Mode.',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'unity_terminal_execute_batch',
+          description: 'Execute multiple commands sequentially in the runtime debug terminal. Requires Play Mode. More efficient than multiple single execute calls.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              commands: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Array of commands to execute sequentially (e.g., ["time.scale 0", "fps", "obj.list"])',
+              },
+            },
+            required: ['commands'],
+          },
+        },
+        {
+          name: 'unity_terminal_get_logs',
+          description: 'Get the runtime debug terminal log buffer. Shows all terminal output including command results, Unity logs (if capture is enabled), system messages, and errors. Requires Play Mode.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              type: {
+                type: 'string',
+                description: 'Filter by log type',
+                enum: ['all', 'info', 'warning', 'error', 'input', 'system'],
+              },
+              limit: {
+                type: 'number',
+                description: 'Maximum number of log entries to return. Returns the most recent entries.',
+              },
+            },
+          },
+        },
+        {
+          name: 'unity_terminal_get_history',
+          description: 'Get the runtime debug terminal command history. Shows previously executed commands (persisted across Play Mode restarts). Requires Play Mode.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              limit: {
+                type: 'number',
+                description: 'Maximum number of history entries to return. Returns the most recent entries.',
+              },
+            },
+          },
+        },
       ],
     }));
 
@@ -262,6 +330,21 @@ class UnityMCPServer {
 
           case 'unity_get_hierarchy':
             return await this.handleGetHierarchy(args as { maxDepth?: number });
+
+          case 'unity_terminal_execute':
+            return await this.handleTerminalExecute(args as { command: string });
+
+          case 'unity_terminal_status':
+            return await this.handleTerminalStatus();
+
+          case 'unity_terminal_execute_batch':
+            return await this.handleTerminalExecuteBatch(args as { commands: string[] });
+
+          case 'unity_terminal_get_logs':
+            return await this.handleTerminalGetLogs(args as { type?: string; limit?: number });
+
+          case 'unity_terminal_get_history':
+            return await this.handleTerminalGetHistory(args as { limit?: number });
 
           default:
             return {
@@ -514,6 +597,114 @@ class UnityMCPServer {
     return {
       content: [{ type: 'text', text: lines.join('\n') }],
     };
+  }
+
+  private async handleTerminalExecute(args: { command: string }) {
+    if (!args.command) {
+      return {
+        content: [{ type: 'text', text: 'Error: command parameter is required' }],
+        isError: true,
+      };
+    }
+
+    const response = await this.unityClient.executeTerminalCommand({ command: args.command });
+
+    if (!response.success) {
+      return {
+        content: [{ type: 'text', text: `Terminal error: ${response.error}` }],
+        isError: true,
+      };
+    }
+
+    const text = response.output
+      ? `> ${response.command}\n${response.output}`
+      : `> ${response.command}\n(no output)`;
+
+    return { content: [{ type: 'text', text }] };
+  }
+
+  private async handleTerminalStatus() {
+    const status = await this.unityClient.getTerminalStatus();
+
+    const text = [
+      `Debug Terminal Status:`,
+      `- Active: ${status.active ? 'Yes' : 'No'}`,
+      `- Visible: ${status.visible ? 'Yes' : 'No'}`,
+      `- Play Mode: ${status.isPlaying ? 'Yes' : 'No'}`,
+      `- Log Count: ${status.logCount}`,
+      `- Registered Commands: ${status.commandCount}`,
+    ].join('\n');
+
+    return { content: [{ type: 'text', text }] };
+  }
+
+  private async handleTerminalExecuteBatch(args: { commands: string[] }) {
+    if (!args.commands || args.commands.length === 0) {
+      return {
+        content: [{ type: 'text', text: 'Error: commands parameter is required (non-empty array)' }],
+        isError: true,
+      };
+    }
+
+    const response = await this.unityClient.executeTerminalBatch({ commands: args.commands });
+
+    const lines = response.results.map((r) => {
+      const status = r.success ? 'OK' : 'ERR';
+      const output = r.output ?? r.error ?? '(no output)';
+      return `[${status}] > ${r.command}\n${output}`;
+    });
+
+    const summary = `Batch: ${response.results.filter((r) => r.success).length}/${response.count} succeeded`;
+    const text = `${summary}\n\n${lines.join('\n\n')}`;
+    return { content: [{ type: 'text', text }] };
+  }
+
+  private async handleTerminalGetLogs(args: { type?: string; limit?: number }) {
+    const response = await this.unityClient.getTerminalLogs({
+      type: args.type,
+      limit: args.limit,
+    });
+
+    if (!response.active) {
+      return {
+        content: [{ type: 'text', text: 'Debug Terminal is not active. Enter Play Mode first.' }],
+        isError: true,
+      };
+    }
+
+    if (response.count === 0) {
+      return { content: [{ type: 'text', text: 'Terminal log buffer is empty.' }] };
+    }
+
+    const lines = response.logs.map((log) => {
+      const time = new Date(log.timestamp).toLocaleTimeString();
+      const typeTag = `[${log.type.toUpperCase()}]`;
+      return `${typeTag} ${time}: ${log.text}`;
+    });
+
+    const text = `Terminal Logs (${response.count} entries):\n${lines.join('\n')}`;
+    return { content: [{ type: 'text', text }] };
+  }
+
+  private async handleTerminalGetHistory(args: { limit?: number }) {
+    const response = await this.unityClient.getTerminalHistory({
+      limit: args.limit,
+    });
+
+    if (!response.active) {
+      return {
+        content: [{ type: 'text', text: 'Debug Terminal is not active. Enter Play Mode first.' }],
+        isError: true,
+      };
+    }
+
+    if (response.count === 0) {
+      return { content: [{ type: 'text', text: 'No command history.' }] };
+    }
+
+    const lines = response.history.map((cmd, i) => `  ${i + 1}. ${cmd}`);
+    const text = `Command History (${response.count} entries):\n${lines.join('\n')}`;
+    return { content: [{ type: 'text', text }] };
   }
 
   private setupErrorHandling(): void {

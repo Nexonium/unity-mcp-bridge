@@ -26,6 +26,7 @@ Unity MCP Bridge enables AI assistants like **Claude in Cursor** to interact dir
 - **Asset Navigation** — Open prefabs, scenes, and scripts; select and frame objects in the hierarchy
 - **Hierarchy Inspection** — View the full GameObject hierarchy of scenes and prefabs
 - **Asset Refresh** — Trigger asset database refresh after code changes
+- **Debug Terminal** — In-game IMGUI debug console with 20+ built-in commands, custom command support, argument autocomplete, watch expressions, and clipboard support
 - **Background Operation** — Works even when Unity is not in focus (for most operations)
 - **Easy Setup** — Simple installation via Unity Package Manager
 
@@ -52,7 +53,7 @@ Unity MCP Bridge enables AI assistants like **Claude in Cursor** to interact dir
 
 To install a specific version, append the tag:
 ```
-https://github.com/Nexonium/unity-mcp-bridge.git#v1.1.0
+https://github.com/Nexonium/unity-mcp-bridge.git#v1.2.0-pre.1
 ```
 
 **Option B: Add to manifest.json**
@@ -62,7 +63,7 @@ Add to your `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.nexonium.unity-mcp-bridge": "https://github.com/Nexonium/unity-mcp-bridge.git#v1.1.0"
+    "com.nexonium.unity-mcp-bridge": "https://github.com/Nexonium/unity-mcp-bridge.git#v1.2.0-pre.1"
   }
 }
 ```
@@ -118,6 +119,8 @@ Once configured, the AI assistant in Cursor can use Unity tools automatically. T
 - *"Start Play Mode and take a screenshot"*
 - *"Open the Player prefab and show me its hierarchy"*
 - *"Take a screenshot of the Scene View"*
+- *"Execute 'obj.find Player' in the debug terminal"*
+- *"Run 'mem' in the terminal to check memory usage"*
 
 ### Example Workflows
 
@@ -182,6 +185,75 @@ Once configured, the AI assistant in Cursor can use Unity tools automatically. T
 | `unity_select_object` | Select a GameObject by hierarchy path or name |
 | `unity_frame_selected` | Frame selected object in Scene View (like pressing F) |
 | `unity_get_hierarchy` | Get the full hierarchy of objects in the current scene or prefab |
+
+### Debug Terminal
+
+| Tool | Description |
+|------|-------------|
+| `unity_terminal_execute` | Execute a command in the runtime debug terminal (requires Play Mode) |
+| `unity_terminal_status` | Get terminal status (active, visible, command count) |
+| `unity_terminal_get_logs` | Get terminal log entries with optional type/count filters |
+| `unity_terminal_get_history` | Get command history |
+| `unity_terminal_execute_batch` | Execute multiple commands sequentially |
+
+## Debug Terminal
+
+The Debug Terminal is an in-game IMGUI console for runtime debugging. Press **~** (backtick) to toggle.
+
+### Built-in Commands
+
+| Command | Description |
+|---------|-------------|
+| `help [cmd]` | List commands or show help for a specific command |
+| `clear` | Clear terminal output |
+| `scene [name]` | Show/load scenes |
+| `fps` | Show current FPS |
+| `mem` | Detailed memory usage (managed heap, allocations, GC stats) |
+| `sysinfo` | System info (CPU, GPU, RAM, resolution, quality) |
+| `gc` | Force garbage collection |
+| `time.scale [val]` | Get/set time scale |
+| `obj.find <name>` | Find a GameObject |
+| `obj.inspect <name>` | Inspect components |
+| `obj.toggle <name>` | Toggle active state |
+| `obj.get <name> <path>` | Get component property (e.g., `obj.get Main Camera Transform.position.x`) |
+| `obj.set <name> <path> <val>` | Set component property |
+| `obj.members <name> <type>` | List component members |
+| `watch <name> <path>` | Add a live watch expression |
+| `unwatch <id\|all>` | Remove watch expressions |
+| `debug.toggle [name]` | Toggle debug visualization flags |
+| `alias [name] [cmd]` | Create/list command aliases |
+| `logs.capture [on\|off]` | Toggle Unity log capture |
+
+### Terminal Features
+
+- **Tab Completion** for commands and arguments (GameObject names, scenes, components, aliases)
+- **Command History** with Up/Down arrows (persisted across sessions)
+- **Clipboard** support (Ctrl+C / Ctrl+V)
+- **Ctrl+Backspace** to delete word backward
+- **PageUp/PageDown** scrolling
+- **Watch Panel** displays live-updating values below the terminal
+- **Command Aliases** with persistence (e.g., `alias p obj.find Player`)
+
+### Custom Commands
+
+Add game-specific commands using the `[TerminalCommand]` attribute:
+
+```csharp
+using UnityMCPBridge.Terminal;
+
+public static class MyCommands
+{
+    [TerminalCommand("hp", "Set player health", "hp [value]",
+        CompleterMethod = "GameObjectNames")]
+    public static string SetHealth(string[] args)
+    {
+        // Your game logic here
+        return "Done";
+    }
+}
+```
+
+Commands are auto-discovered via reflection. See `CONTRIBUTING.md` for full details.
 
 ## Configuration
 

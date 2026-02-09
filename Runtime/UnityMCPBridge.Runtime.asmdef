@@ -1,12 +1,8 @@
 {
-    "name": "Nexonium.UnityMCPBridge.Editor",
-    "rootNamespace": "UnityMCPBridge",
-    "references": [
-        "Nexonium.UnityMCPBridge.Runtime"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "name": "Nexonium.UnityMCPBridge.Runtime",
+    "rootNamespace": "UnityMCPBridge.Terminal",
+    "references": [],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

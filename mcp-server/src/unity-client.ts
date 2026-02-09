@@ -15,6 +15,15 @@ import {
   FrameSelectedResponse,
   GetHierarchyRequest,
   GetHierarchyResponse,
+  TerminalExecuteRequest,
+  TerminalExecuteResponse,
+  TerminalStatusResponse,
+  TerminalBatchExecuteRequest,
+  TerminalBatchExecuteResponse,
+  TerminalLogsRequest,
+  TerminalLogsResponse,
+  TerminalHistoryRequest,
+  TerminalHistoryResponse,
 } from './types.js';
 
 /**
@@ -180,6 +189,48 @@ export class UnityClient {
    */
   async getHierarchy(options: GetHierarchyRequest = {}): Promise<GetHierarchyResponse> {
     return this.request<GetHierarchyResponse>('/editor/hierarchy', 'GET', options.maxDepth ? { maxDepth: options.maxDepth } : undefined);
+  }
+
+  /**
+   * Executes a command in the runtime debug terminal.
+   * @param options Command to execute
+   */
+  async executeTerminalCommand(options: TerminalExecuteRequest): Promise<TerminalExecuteResponse> {
+    return this.request<TerminalExecuteResponse>('/terminal/execute', 'POST', {
+      command: options.command,
+    });
+  }
+
+  /**
+   * Gets the status of the runtime debug terminal.
+   */
+  async getTerminalStatus(): Promise<TerminalStatusResponse> {
+    return this.request<TerminalStatusResponse>('/terminal/status');
+  }
+
+  /**
+   * Executes multiple commands sequentially in the runtime debug terminal.
+   */
+  async executeTerminalBatch(options: TerminalBatchExecuteRequest): Promise<TerminalBatchExecuteResponse> {
+    return this.request<TerminalBatchExecuteResponse>('/terminal/execute-batch', 'POST', {
+      commands: options.commands,
+    });
+  }
+
+  /**
+   * Gets the runtime terminal log buffer.
+   */
+  async getTerminalLogs(options: TerminalLogsRequest = {}): Promise<TerminalLogsResponse> {
+    return this.request<TerminalLogsResponse>('/terminal/logs', 'GET',
+      (options.limit || options.type) ? options : undefined);
+  }
+
+  /**
+   * Gets the runtime terminal command history.
+   */
+  async getTerminalHistory(options: TerminalHistoryRequest = {}): Promise<TerminalHistoryResponse> {
+    return this.request<TerminalHistoryResponse>('/terminal/history', 'GET',
+      options.limit ? { limit: options.limit } : undefined);
   }
 
   /**

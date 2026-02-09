@@ -63,15 +63,106 @@ Thank you for your interest in contributing! This document provides guidelines a
 ```
 unity-mcp-bridge/
 ├── Editor/                 # Unity Editor scripts
-│   ├── Core/              # Interfaces, models, main bridge
+│   ├── Core/              # Interfaces, models, bridges (TerminalBridge)
 │   ├── Services/          # Log and compilation services
-│   ├── Server/            # HTTP server implementation
+│   ├── Server/            # HTTP server and request handling
 │   ├── Settings/          # User preferences
 │   └── UI/                # Editor windows
+├── Runtime/               # Play Mode runtime components
+│   └── Terminal/          # Debug terminal system
+│       ├── Commands/      # Built-in + custom commands ([TerminalCommand])
+│       ├── DebugTerminal.cs          # Core terminal UI (IMGUI)
+│       ├── TerminalCommandRegistry.cs # Reflection-based command discovery
+│       ├── TerminalCommandAttribute.cs # [TerminalCommand] attribute
+│       ├── TerminalSettings.cs       # Runtime configuration
+│       ├── TerminalLog.cs            # Log entry model
+│       ├── ReflectionResolver.cs     # Component property get/set via reflection
+│       ├── ArgumentCompleters.cs     # Tab-completion providers
+│       ├── WatchManager.cs           # Live watch expressions
+│       └── DebugToggles.cs           # Named boolean toggle registry
 ├── mcp-server/            # Node.js MCP server
 │   └── src/               # TypeScript source
 └── package.json           # Unity package manifest
 ```
+
+## Adding Custom Terminal Commands
+
+Create debug commands for your game using the `[TerminalCommand]` attribute:
+
+```csharp
+using UnityMCPBridge.Terminal;
+
+public static class MyGameCommands
+{
+    [TerminalCommand("hp", "Set player health", "hp [value]")]
+    public static string SetHealth(string[] args)
+    {
+        if (args.Length == 0)
+            return $"Health: {Player.Instance.Health}";
+
+        if (int.TryParse(args[0], out var value))
+        {
+            Player.Instance.Health = value;
+            return $"Health set to {value}";
+        }
+        return $"Invalid value: '{args[0]}'";
+    }
+}
+```
+
+Commands are auto-discovered via reflection on Play Mode start. See
+`Runtime/Terminal/Commands/ExampleGameCommands.cs.example` for more patterns.
+
+### Argument Autocomplete
+
+Add Tab-completion to your commands by specifying a `CompleterMethod`:
+
+```csharp
+[TerminalCommand("teleport", "Teleport to a location", "teleport <place>",
+    CompleterMethod = "TeleportLocations")]
+public static string Teleport(string[] args) { /* ... */ }
+
+// Completer must be: static IReadOnlyList<string> Method(string[] currentArgs)
+public static IReadOnlyList<string> TeleportLocations(string[] currentArgs)
+{
+    var all = new[] { "spawn", "boss", "shop", "dungeon" };
+    var prefix = currentArgs.Length > 0 ? currentArgs[0] : "";
+    return all.Where(n => n.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).ToList();
+}
+```
+
+Built-in completers in `ArgumentCompleters.cs`: `GameObjectNames`, `SceneNames`,
+`AliasNames`, `CommandNames`, `ToggleNames`, `ComponentPath`.
+
+### Watch Expressions
+
+The watch system evaluates expressions every frame and displays results in a panel
+below the terminal. Use it to monitor runtime values:
+
+```
+watch Main Camera Transform.position
+watch Player SpriteRenderer.color
+unwatch all
+```
+
+### Debug Toggles
+
+Register named boolean flags that game code can query:
+
+```csharp
+// In your game initialization
+DebugToggles.Register("hitboxes", "Show collision hitboxes", false);
+DebugToggles.Register("grid", "Show placement grid", false);
+
+// In your rendering/update code
+if (DebugToggles.Get("hitboxes"))
+    DrawHitboxes();
+
+// Subscribe to changes
+DebugToggles.OnToggleChanged += (name, value) => Debug.Log($"{name}: {value}");
+```
+
+Toggle from the terminal: `debug.toggle hitboxes` or `debug.toggle grid on`.
 
 ## Testing
 

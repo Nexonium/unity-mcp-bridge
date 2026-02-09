@@ -17,6 +17,10 @@ namespace UnityMCPBridge.Settings
         private const string IncludeStackTraceKey = KeyPrefix + "IncludeStackTrace";
         private const string ScreenshotQualityKey = KeyPrefix + "ScreenshotQuality";
         private const string ScreenshotCleanupMinutesKey = KeyPrefix + "ScreenshotCleanupMinutes";
+        private const string TerminalToggleKeyKey = KeyPrefix + "TerminalToggleKey";
+        private const string TerminalEnabledInBuildsKey = KeyPrefix + "TerminalEnabledInBuilds";
+        private const string TerminalMaxLogEntriesKey = KeyPrefix + "TerminalMaxLogEntries";
+        private const string TerminalFontSizeKey = KeyPrefix + "TerminalFontSize";
 
         // Default values
         private const int DefaultPort = 7890;
@@ -26,6 +30,10 @@ namespace UnityMCPBridge.Settings
         private const bool DefaultIncludeStackTrace = true;
         private const int DefaultScreenshotQuality = 0; // Low
         private const int DefaultScreenshotCleanupMinutes = 30;
+        private const int DefaultTerminalToggleKey = (int)KeyCode.BackQuote;
+        private const bool DefaultTerminalEnabledInBuilds = false;
+        private const int DefaultTerminalMaxLogEntries = 200;
+        private const int DefaultTerminalFontSize = 14;
 
         /// <summary>
         /// HTTP server port. Default: 7890
@@ -91,6 +99,42 @@ namespace UnityMCPBridge.Settings
         }
 
         /// <summary>
+        /// Terminal toggle key. Default: BackQuote (~)
+        /// </summary>
+        public static KeyCode TerminalToggleKey
+        {
+            get => (KeyCode)EditorPrefs.GetInt(TerminalToggleKeyKey, DefaultTerminalToggleKey);
+            set => EditorPrefs.SetInt(TerminalToggleKeyKey, (int)value);
+        }
+
+        /// <summary>
+        /// Whether the terminal is available in development builds. Default: false
+        /// </summary>
+        public static bool TerminalEnabledInBuilds
+        {
+            get => EditorPrefs.GetBool(TerminalEnabledInBuildsKey, DefaultTerminalEnabledInBuilds);
+            set => EditorPrefs.SetBool(TerminalEnabledInBuildsKey, value);
+        }
+
+        /// <summary>
+        /// Maximum terminal output lines. Default: 200
+        /// </summary>
+        public static int TerminalMaxLogEntries
+        {
+            get => EditorPrefs.GetInt(TerminalMaxLogEntriesKey, DefaultTerminalMaxLogEntries);
+            set => EditorPrefs.SetInt(TerminalMaxLogEntriesKey, Mathf.Max(50, value));
+        }
+
+        /// <summary>
+        /// Terminal font size. Default: 14
+        /// </summary>
+        public static int TerminalFontSize
+        {
+            get => EditorPrefs.GetInt(TerminalFontSizeKey, DefaultTerminalFontSize);
+            set => EditorPrefs.SetInt(TerminalFontSizeKey, Mathf.Clamp(value, 10, 24));
+        }
+
+        /// <summary>
         /// Resets all settings to their default values.
         /// </summary>
         public static void ResetToDefaults()
@@ -102,6 +146,10 @@ namespace UnityMCPBridge.Settings
             IncludeStackTrace = DefaultIncludeStackTrace;
             ScreenshotQuality = DefaultScreenshotQuality;
             ScreenshotCleanupMinutes = DefaultScreenshotCleanupMinutes;
+            TerminalToggleKey = (KeyCode)DefaultTerminalToggleKey;
+            TerminalEnabledInBuilds = DefaultTerminalEnabledInBuilds;
+            TerminalMaxLogEntries = DefaultTerminalMaxLogEntries;
+            TerminalFontSize = DefaultTerminalFontSize;
         }
     }
 }

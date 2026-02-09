@@ -215,3 +215,102 @@ export interface GetHierarchyResponse {
   hierarchy: HierarchyItem[];
   error?: string;
 }
+
+/**
+ * Terminal command execution request.
+ */
+export interface TerminalExecuteRequest {
+  /** Command line to execute (e.g., "time.scale 0.5") */
+  command: string;
+}
+
+/**
+ * Terminal command execution response.
+ */
+export interface TerminalExecuteResponse {
+  success: boolean;
+  command: string;
+  output?: string;
+  error?: string;
+}
+
+/**
+ * Terminal status response.
+ */
+export interface TerminalStatusResponse {
+  active: boolean;
+  visible: boolean;
+  logCount: number;
+  commandCount: number;
+  isPlaying: boolean;
+}
+
+/**
+ * Terminal batch execute request.
+ */
+export interface TerminalBatchExecuteRequest {
+  commands: string[];
+}
+
+/**
+ * Single result within a batch execute response.
+ */
+export interface TerminalBatchResult {
+  success: boolean;
+  command: string;
+  output?: string;
+  error?: string;
+}
+
+/**
+ * Terminal batch execute response.
+ */
+export interface TerminalBatchExecuteResponse {
+  success: boolean;
+  count: number;
+  results: TerminalBatchResult[];
+}
+
+/**
+ * Terminal logs request parameters.
+ */
+export interface TerminalLogsRequest {
+  limit?: number;
+  type?: string;
+}
+
+/**
+ * Terminal log entry from the runtime debug terminal.
+ */
+export interface TerminalLogEntry {
+  text: string;
+  type: string;
+  timestamp: string;
+}
+
+/**
+ * Terminal logs response.
+ */
+export interface TerminalLogsResponse {
+  active: boolean;
+  count: number;
+  logs: TerminalLogEntry[];
+  error?: string;
+}
+
+/**
+ * Terminal history request parameters.
+ */
+export interface TerminalHistoryRequest {
+  limit?: number;
+}
+
+/**
+ * Terminal history response.
+ */
+export interface TerminalHistoryResponse {
+  active: boolean;
+  count: number;
+  history: string[];
+  error?: string;
+}
