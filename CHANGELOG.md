@@ -2,7 +2,7 @@
 
 All notable changes to Unity MCP Bridge will be documented in this file.
 
-## [1.2.0-pre.1] - 2025-02-09
+## [1.2.0] - 2025-02-10
 
 ### Added
 
