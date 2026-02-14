@@ -24,6 +24,8 @@ import {
   TerminalLogsResponse,
   TerminalHistoryRequest,
   TerminalHistoryResponse,
+  TerminalCommandsRequest,
+  TerminalCommandsResponse,
 } from './types.js';
 
 /**
@@ -231,6 +233,14 @@ export class UnityClient {
   async getTerminalHistory(options: TerminalHistoryRequest = {}): Promise<TerminalHistoryResponse> {
     return this.request<TerminalHistoryResponse>('/terminal/history', 'GET',
       options.limit ? { limit: options.limit } : undefined);
+  }
+
+  /**
+   * Gets all available terminal commands with metadata.
+   */
+  async getTerminalCommands(options: TerminalCommandsRequest = {}): Promise<TerminalCommandsResponse> {
+    return this.request<TerminalCommandsResponse>('/terminal/commands', 'GET',
+      options.category ? { category: options.category } : undefined);
   }
 
   /**

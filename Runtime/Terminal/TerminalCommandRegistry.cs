@@ -84,13 +84,24 @@ namespace UnityMCPBridge.Terminal
             }
         }
 
-        public static void Register(string name, string description, Func<string[], string> handler, string usage = null)
+        /// <summary>
+        /// Returns structured info for all registered commands.
+        /// </summary>
+        public static IReadOnlyList<CommandInfo> GetAllCommands()
+        {
+            lock (_lock)
+            {
+                return _commands.Values.OrderBy(c => c.Name).ToList();
+            }
+        }
+
+        public static void Register(string name, string description, Func<string[], string> handler, string usage = null, string category = null)
         {
             if (string.IsNullOrEmpty(name) || handler == null) return;
 
             lock (_lock)
             {
-                _commands[name.ToLowerInvariant()] = new CommandInfo(name.ToLowerInvariant(), description, handler, usage);
+                _commands[name.ToLowerInvariant()] = new CommandInfo(name.ToLowerInvariant(), description, handler, usage, category);
                 _sortedNames = _commands.Keys.OrderBy(k => k).ToList();
             }
         }
@@ -124,7 +135,7 @@ namespace UnityMCPBridge.Terminal
                             }
 
                             var handler = (Func<string[], string>)Delegate.CreateDelegate(typeof(Func<string[], string>), method);
-                            var cmdInfo = new CommandInfo(attr.Name.ToLowerInvariant(), attr.Description, handler, attr.Usage);
+                            var cmdInfo = new CommandInfo(attr.Name.ToLowerInvariant(), attr.Description, handler, attr.Usage, attr.Category);
 
                             // Resolve argument completer if specified
                             if (!string.IsNullOrEmpty(attr.CompleterMethod))
@@ -216,6 +227,7 @@ namespace UnityMCPBridge.Terminal
             public string Name { get; }
             public string Description { get; }
             public string Usage { get; }
+            public string Category { get; }
             public Func<string[], string> Handler { get; }
 
             /// <summary>
@@ -223,12 +235,13 @@ namespace UnityMCPBridge.Terminal
             /// </summary>
             public Func<string[], IReadOnlyList<string>> ArgumentCompleter { get; set; }
 
-            public CommandInfo(string name, string description, Func<string[], string> handler, string usage = null)
+            public CommandInfo(string name, string description, Func<string[], string> handler, string usage = null, string category = null)
             {
                 Name = name;
                 Description = description;
                 Handler = handler;
                 Usage = usage;
+                Category = category ?? "builtin";
             }
         }
 

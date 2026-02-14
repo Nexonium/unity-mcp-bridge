@@ -56,6 +56,7 @@ namespace UnityMCPBridge.Server
                     "/terminal/execute" when method == "POST" => HandleTerminalExecute(body),
                     "/terminal/execute-batch" when method == "POST" => HandleTerminalExecuteBatch(body),
                     "/terminal/status" => HandleTerminalStatus(),
+                    "/terminal/commands" => HandleTerminalCommands(body),
                     "/terminal/logs" => HandleTerminalLogs(body),
                     "/terminal/history" => HandleTerminalHistory(body),
                     _ => (404, "application/json", ToJson(new Dictionary<string, object>
@@ -674,6 +675,27 @@ namespace UnityMCPBridge.Server
                 ["logCount"] = logCount,
                 ["commandCount"] = commandCount,
                 ["isPlaying"] = EditorStateCache.IsPlaying
+            }));
+        }
+
+        private (int, string, string) HandleTerminalCommands(string body)
+        {
+            var categoryFilter = "all";
+
+            if (!string.IsNullOrEmpty(body))
+            {
+                var categoryMatch = System.Text.RegularExpressions.Regex.Match(body, "\"category\"\\s*:\\s*\"([^\"]+)\"");
+                if (categoryMatch.Success)
+                    categoryFilter = categoryMatch.Groups[1].Value.ToLowerInvariant();
+            }
+
+            var commands = TerminalBridge.GetCommands(categoryFilter);
+
+            return (200, "application/json", ToJson(new Dictionary<string, object>
+            {
+                ["count"] = commands.Count,
+                ["category"] = categoryFilter,
+                ["commands"] = commands
             }));
         }
 

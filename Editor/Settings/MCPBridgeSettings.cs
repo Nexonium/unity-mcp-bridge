@@ -17,6 +17,7 @@ namespace UnityMCPBridge.Settings
         private const string IncludeStackTraceKey = KeyPrefix + "IncludeStackTrace";
         private const string ScreenshotQualityKey = KeyPrefix + "ScreenshotQuality";
         private const string ScreenshotCleanupMinutesKey = KeyPrefix + "ScreenshotCleanupMinutes";
+        private const string UseScreenPixelCaptureKey = KeyPrefix + "UseScreenPixelCapture";
         private const string TerminalToggleKeyKey = KeyPrefix + "TerminalToggleKey";
         private const string TerminalEnabledInBuildsKey = KeyPrefix + "TerminalEnabledInBuilds";
         private const string TerminalMaxLogEntriesKey = KeyPrefix + "TerminalMaxLogEntries";
@@ -30,6 +31,7 @@ namespace UnityMCPBridge.Settings
         private const bool DefaultIncludeStackTrace = true;
         private const int DefaultScreenshotQuality = 0; // Low
         private const int DefaultScreenshotCleanupMinutes = 30;
+        private const bool DefaultUseScreenPixelCapture = true;
         private const int DefaultTerminalToggleKey = (int)KeyCode.BackQuote;
         private const bool DefaultTerminalEnabledInBuilds = false;
         private const int DefaultTerminalMaxLogEntries = 200;
@@ -99,6 +101,16 @@ namespace UnityMCPBridge.Settings
         }
 
         /// <summary>
+        /// Use screen pixel capture for Game View screenshots instead of camera render.
+        /// Captures ScreenSpace-Overlay canvases correctly. Default: true
+        /// </summary>
+        public static bool UseScreenPixelCapture
+        {
+            get => EditorPrefs.GetBool(UseScreenPixelCaptureKey, DefaultUseScreenPixelCapture);
+            set => EditorPrefs.SetBool(UseScreenPixelCaptureKey, value);
+        }
+
+        /// <summary>
         /// Terminal toggle key. Default: BackQuote (~)
         /// </summary>
         public static KeyCode TerminalToggleKey
@@ -146,6 +158,7 @@ namespace UnityMCPBridge.Settings
             IncludeStackTrace = DefaultIncludeStackTrace;
             ScreenshotQuality = DefaultScreenshotQuality;
             ScreenshotCleanupMinutes = DefaultScreenshotCleanupMinutes;
+            UseScreenPixelCapture = DefaultUseScreenPixelCapture;
             TerminalToggleKey = (KeyCode)DefaultTerminalToggleKey;
             TerminalEnabledInBuilds = DefaultTerminalEnabledInBuilds;
             TerminalMaxLogEntries = DefaultTerminalMaxLogEntries;

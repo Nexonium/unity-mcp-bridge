@@ -15,6 +15,12 @@ namespace UnityMCPBridge.Terminal
         /// </summary>
         public string CompleterMethod { get; set; }
 
+        /// <summary>
+        /// Command category for grouping and filtering (e.g., "builtin", "game", "debug").
+        /// When not specified, defaults to "builtin".
+        /// </summary>
+        public string Category { get; set; }
+
         public TerminalCommandAttribute(string name, string description, string usage = null)
         {
             Name = name;

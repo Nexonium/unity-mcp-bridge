@@ -1,6 +1,6 @@
 {
   "name": "com.nexonium.unity-mcp-bridge",
-  "version": "1.2.0",
+  "version": "1.3.0-pre.1",
   "displayName": "Unity MCP Bridge",
   "description": "Bridge between Unity Editor and AI agents via Model Context Protocol (MCP). Provides real-time access to console logs, compilation errors, Play Mode control, screenshots, and asset navigation.",
   "unity": "6000.0",

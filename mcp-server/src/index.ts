@@ -28,7 +28,7 @@ class UnityMCPServer {
     this.server = new Server(
       {
         name: 'unity-mcp-server',
-        version: '1.2.0-pre.1',
+        version: '1.3.0-pre.1',
       },
       {
         capabilities: {
@@ -277,6 +277,19 @@ class UnityMCPServer {
             },
           },
         },
+        {
+          name: 'unity_terminal_commands',
+          description: 'List all available terminal commands with descriptions, usage, and categories. Use to discover what commands are available, including project-specific game commands. Does not require Play Mode.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              category: {
+                type: 'string',
+                description: 'Filter by category (e.g., "builtin", "game", "all"). Default: "all"',
+              },
+            },
+          },
+        },
       ],
     }));
 
@@ -345,6 +358,9 @@ class UnityMCPServer {
 
           case 'unity_terminal_get_history':
             return await this.handleTerminalGetHistory(args as { limit?: number });
+
+          case 'unity_terminal_commands':
+            return await this.handleTerminalCommands(args as { category?: string });
 
           default:
             return {
@@ -705,6 +721,39 @@ class UnityMCPServer {
     const lines = response.history.map((cmd, i) => `  ${i + 1}. ${cmd}`);
     const text = `Command History (${response.count} entries):\n${lines.join('\n')}`;
     return { content: [{ type: 'text', text }] };
+  }
+
+  private async handleTerminalCommands(args: { category?: string }) {
+    const response = await this.unityClient.getTerminalCommands({
+      category: args.category,
+    });
+
+    if (response.count === 0) {
+      const filterNote = args.category && args.category !== 'all'
+        ? ` in category "${args.category}"`
+        : '';
+      return { content: [{ type: 'text', text: `No commands found${filterNote}.` }] };
+    }
+
+    // Group by category
+    const byCategory = new Map<string, typeof response.commands>();
+    for (const cmd of response.commands) {
+      const cat = cmd.category ?? 'builtin';
+      if (!byCategory.has(cat)) byCategory.set(cat, []);
+      byCategory.get(cat)!.push(cmd);
+    }
+
+    const lines: string[] = [`Available Commands (${response.count}):`];
+
+    for (const [category, commands] of byCategory) {
+      lines.push(`\n[${category}]`);
+      for (const cmd of commands) {
+        const usage = cmd.usage ? ` -- Usage: ${cmd.usage}` : '';
+        lines.push(`  ${cmd.name}: ${cmd.description}${usage}`);
+      }
+    }
+
+    return { content: [{ type: 'text', text: lines.join('\n') }] };
   }
 
   private setupErrorHandling(): void {

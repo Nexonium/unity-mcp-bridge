@@ -2,6 +2,22 @@
 
 All notable changes to Unity MCP Bridge will be documented in this file.
 
+## [1.3.0-pre.1] - 2025-02-14
+
+### Added
+- `unity_terminal_commands` MCP tool to list all available commands with descriptions, usage, and categories
+- `Category` property on `[TerminalCommand]` attribute for grouping commands (e.g., "builtin", "game")
+- `/terminal/commands` HTTP endpoint with optional category filtering
+- Screen pixel capture mode for Game View screenshots (captures ScreenSpace-Overlay canvases)
+- `UseScreenPixelCapture` setting in MCP Bridge window (default: enabled)
+
+### Fixed
+- Game View screenshots showing blank screen when using ScreenSpace-Overlay canvases (uses `InternalEditorUtility.ReadScreenPixel` instead of camera render)
+
+### Changed
+- `TerminalCommandRegistry.Register()` now accepts optional `category` parameter
+- Screenshot service falls back to camera render if screen pixel capture fails
+
 ## [1.2.0] - 2025-02-10
 
 ### Added

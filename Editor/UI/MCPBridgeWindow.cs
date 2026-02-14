@@ -203,6 +203,20 @@ namespace UnityMCPBridge.UI
 
             EditorGUILayout.BeginVertical(_statusBoxStyle);
 
+            // Screen pixel capture mode
+            var useScreenPixel = EditorGUILayout.Toggle(
+                new GUIContent("Screen Pixel Capture",
+                    "Capture Game View using screen pixels instead of camera render. " +
+                    "Correctly captures ScreenSpace-Overlay canvases. Disable to use camera-based capture."),
+                MCPBridgeSettings.UseScreenPixelCapture
+            );
+            if (useScreenPixel != MCPBridgeSettings.UseScreenPixelCapture)
+            {
+                MCPBridgeSettings.UseScreenPixelCapture = useScreenPixel;
+            }
+
+            EditorGUILayout.Space(5);
+
             // Default quality
             var qualityLabels = new[] { "Low (640x480, ~500 tokens)", "Medium (1280x720, ~1200 tokens)", "High (native, ~2700+ tokens)" };
             var quality = EditorGUILayout.Popup(

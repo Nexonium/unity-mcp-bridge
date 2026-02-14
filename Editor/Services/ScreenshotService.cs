@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 using UnityMCPBridge.Core;
+using UnityMCPBridge.Settings;
 
 namespace UnityMCPBridge.Services
 {
@@ -131,6 +133,136 @@ namespace UnityMCPBridge.Services
 
         private ScreenshotResult CaptureGameView(ScreenshotQuality quality)
         {
+            if (MCPBridgeSettings.UseScreenPixelCapture)
+            {
+                return CaptureGameViewScreenPixel(quality);
+            }
+
+            return CaptureGameViewCameraRender(quality);
+        }
+
+        private ScreenshotResult CaptureGameViewScreenPixel(ScreenshotQuality quality)
+        {
+            var gameViewType = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
+            if (gameViewType == null)
+            {
+                return CaptureGameViewCameraRender(quality);
+            }
+
+            var gameView = EditorWindow.GetWindow(gameViewType, false, "Game", false);
+            if (gameView == null)
+            {
+                return CaptureGameViewCameraRender(quality);
+            }
+
+            // Focus and repaint to ensure current frame is rendered
+            gameView.Focus();
+            gameView.Repaint();
+
+            // Get the Game View render area (excluding tab bar and borders)
+            var viewPosition = gameView.position;
+            int viewWidth = Mathf.Max((int)viewPosition.width, 1);
+            int viewHeight = Mathf.Max((int)viewPosition.height, 1);
+
+            // Read pixels directly from screen at the Game View window position
+            // This captures everything visible including ScreenSpace-Overlay canvases
+            var screenPosition = new Vector2(viewPosition.x, viewPosition.y);
+            Color[] pixels;
+
+            try
+            {
+                pixels = InternalEditorUtility.ReadScreenPixel(screenPosition, viewWidth, viewHeight);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[MCP Bridge] ReadScreenPixel failed, falling back to camera render: {ex.Message}");
+                return CaptureGameViewCameraRender(quality);
+            }
+
+            if (pixels == null || pixels.Length == 0)
+            {
+                Debug.LogWarning("[MCP Bridge] ReadScreenPixel returned empty, falling back to camera render");
+                return CaptureGameViewCameraRender(quality);
+            }
+
+            // Create texture from captured pixels
+            var fullTexture = new Texture2D(viewWidth, viewHeight, TextureFormat.RGBA32, false);
+            fullTexture.SetPixels(pixels);
+            fullTexture.Apply();
+
+            // Resize to target quality if needed
+            var (targetWidth, targetHeight) = GetTargetResolution(quality);
+            int finalWidth, finalHeight;
+
+            if (targetWidth > 0 && targetHeight > 0 && (viewWidth > targetWidth || viewHeight > targetHeight))
+            {
+                var aspect = (float)viewWidth / viewHeight;
+                if (aspect > (float)targetWidth / targetHeight)
+                {
+                    finalWidth = targetWidth;
+                    finalHeight = Mathf.Max(Mathf.RoundToInt(targetWidth / aspect), 1);
+                }
+                else
+                {
+                    finalHeight = targetHeight;
+                    finalWidth = Mathf.Max(Mathf.RoundToInt(targetHeight * aspect), 1);
+                }
+            }
+            else
+            {
+                finalWidth = viewWidth;
+                finalHeight = viewHeight;
+            }
+
+            Texture2D outputTexture;
+            if (finalWidth != viewWidth || finalHeight != viewHeight)
+            {
+                // Scale down using RenderTexture for bilinear filtering
+                var rt = RenderTexture.GetTemporary(finalWidth, finalHeight, 0, RenderTextureFormat.ARGB32);
+                var previousActive = RenderTexture.active;
+
+                Graphics.Blit(fullTexture, rt);
+                RenderTexture.active = rt;
+
+                outputTexture = new Texture2D(finalWidth, finalHeight, TextureFormat.RGB24, false);
+                outputTexture.ReadPixels(new Rect(0, 0, finalWidth, finalHeight), 0, 0);
+                outputTexture.Apply();
+
+                RenderTexture.active = previousActive;
+                RenderTexture.ReleaseTemporary(rt);
+                UnityEngine.Object.DestroyImmediate(fullTexture);
+            }
+            else
+            {
+                outputTexture = fullTexture;
+            }
+
+            // Save to file
+            var filename = GenerateFilename("game");
+            var filePath = Path.Combine(_screenshotDirectory, filename);
+            var pngBytes = outputTexture.EncodeToPNG();
+            File.WriteAllBytes(filePath, pngBytes);
+
+            var width = outputTexture.width;
+            var height = outputTexture.height;
+            UnityEngine.Object.DestroyImmediate(outputTexture);
+
+            var fileInfo = new FileInfo(filePath);
+
+            return new ScreenshotResult
+            {
+                Success = true,
+                FilePath = filePath,
+                Width = width,
+                Height = height,
+                FileSize = fileInfo.Length,
+                EstimatedTokens = CalculateTokens(width, height),
+                Timestamp = DateTime.UtcNow
+            };
+        }
+
+        private ScreenshotResult CaptureGameViewCameraRender(ScreenshotQuality quality)
+        {
             // Find the main camera or any camera in the scene
             var camera = Camera.main;
             if (camera == null)
@@ -157,10 +289,10 @@ namespace UnityMCPBridge.Services
             // Get camera's aspect ratio from Game View or use default
             var gameViewType = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
             var gameView = EditorWindow.GetWindow(gameViewType, false, "Game", false);
-            
+
             int viewWidth = 1920;
             int viewHeight = 1080;
-            
+
             if (gameView != null)
             {
                 var position = gameView.position;

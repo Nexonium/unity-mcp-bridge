@@ -103,6 +103,40 @@ namespace UnityMCPBridge.Core
         }
 
         /// <summary>
+        /// Gets all registered terminal commands with metadata.
+        /// Works regardless of Play Mode (commands are discovered at registry init).
+        /// </summary>
+        public static List<Dictionary<string, object>> GetCommands(string categoryFilter)
+        {
+            if (!TerminalCommandRegistry.IsInitialized)
+                TerminalCommandRegistry.Initialize();
+
+            var commands = TerminalCommandRegistry.GetAllCommands();
+            var result = new List<Dictionary<string, object>>();
+
+            foreach (var cmd in commands)
+            {
+                if (!string.IsNullOrEmpty(categoryFilter) && categoryFilter != "all" &&
+                    !string.Equals(cmd.Category, categoryFilter, System.StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var entry = new Dictionary<string, object>
+                {
+                    ["name"] = cmd.Name,
+                    ["description"] = cmd.Description,
+                    ["category"] = cmd.Category
+                };
+
+                if (!string.IsNullOrEmpty(cmd.Usage))
+                    entry["usage"] = cmd.Usage;
+
+                result.Add(entry);
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// Gets terminal command history.
         /// </summary>
         public static (bool active, List<string> history) GetTerminalHistory(int limit)

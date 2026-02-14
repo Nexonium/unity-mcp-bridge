@@ -314,3 +314,30 @@ export interface TerminalHistoryResponse {
   history: string[];
   error?: string;
 }
+
+/**
+ * Terminal command info.
+ */
+export interface TerminalCommandInfo {
+  name: string;
+  description: string;
+  category: string;
+  usage?: string;
+}
+
+/**
+ * Terminal commands list request parameters.
+ */
+export interface TerminalCommandsRequest {
+  /** Filter by category (e.g., "builtin", "game", "all"). Default: "all" */
+  category?: string;
+}
+
+/**
+ * Terminal commands list response.
+ */
+export interface TerminalCommandsResponse {
+  count: number;
+  category: string;
+  commands: TerminalCommandInfo[];
+}
