@@ -111,7 +111,21 @@ namespace UnityMCPBridge.Terminal
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 // Skip system/Unity assemblies for performance
-                var assemblyName = assembly.GetName().Name;
+                string assemblyName;
+                try
+                {
+                    assemblyName = assembly.GetName().Name;
+                }
+                catch (Exception)
+                {
+                    // GetName() can throw on non-ASCII project paths (Cyrillic, CJK, etc.)
+                    // Fall back to FullName parsing: "Name, Version=..., ..."
+                    assemblyName = assembly.FullName;
+                    var commaIdx = assemblyName.IndexOf(',');
+                    if (commaIdx > 0)
+                        assemblyName = assemblyName.Substring(0, commaIdx);
+                }
+
                 if (assemblyName.StartsWith("System") || assemblyName.StartsWith("Unity") ||
                     assemblyName.StartsWith("mscorlib") || assemblyName.StartsWith("Mono") ||
                     assemblyName.StartsWith("netstandard"))
